@@ -1,0 +1,68 @@
+{
+  "card": {
+    "header": {
+      "title": "Inköpslista Streckkod"
+    },
+    "description": "Inköpslista med streckkodsläsning, alfabetisk sortering och snabbval."
+  },
+  "barcode": {
+    "placeholder": "Ange streckkod eller skanna med kamera",
+    "lookup_button": "Slå upp",
+    "scan_button": "Skanna Streckkod",
+    "manual_entry": "Ange Streckkod",
+    "scanning": "Skannar...",
+    "not_found": "Produkt hittades inte för streckkod",
+    "camera_error": "Kameraåtkomst nekad eller inte tillgänglig",
+    "processing": "Slår upp produkt..."
+  },
+  "actions": {
+    "scan_barcode": "Skanna Streckkod",
+    "add_manual": "Lägg till Manuellt",
+    "refresh": "Uppdatera"
+  },
+  "product": {
+    "unknown": "Okänd Produkt",
+    "add_anyway": "Lägg till ändå",
+    "edit_name": "Redigera Produktnamn"
+  },
+  "success": {
+    "added_item": "Lade till \"{{name}}\" i inköpslistan",
+    "item_removed": "Artikel borttagen"
+  },
+  "errors": {
+    "empty_barcode": "Vänligen ange en streckkod",
+    "invalid_barcode": "Ogiltigt streckkodsformat. Måste vara 8-13 siffror.",
+    "product_not_found": "Produkt hittades inte. Du kan fortfarande lägga till den manuellt.",
+    "lookup_failed": "Misslyckades att slå upp streckkod. Försök igen.",
+    "add_failed": "Misslyckades att lägga till artikel i inköpslistan",
+    "empty_input": "Vänligen ange ett produktnamn eller streckkod",
+    "camera_disabled": "Kameraskanning är inaktiverad",
+    "browser_not_supported": "Streckkodsläsning stöds inte i denna webbläsare",
+    "camera_access_failed": "Misslyckades att komma åt kameran: {{message}}",
+    "camera_start_failed": "Misslyckades att starta kameran",
+    "list_load_failed": "Misslyckades att ladda inköpslistan",
+    "item_update_failed": "Misslyckades att uppdatera artikel",
+    "item_remove_failed": "Misslyckades att ta bort artikel"
+  },
+  "editor": {
+    "placeholders": {
+      "quantity": "Antal",
+      "item": "Artikel...",
+      "barcode": "Ange streckkod..."
+    },
+    "labels": {
+      "add_button": "Lägg till",
+      "scan_button": "📱 Skanna",
+      "clear_button": "Rensa klara",
+      "no_items": "Inga artiklar",
+      "complete_btn": "Markera som klar",
+      "plus_btn": "Öka antal",
+      "minus_btn": "Minska antal eller ta bort",
+      "confirm_remove": "Ta bort artikel: {item}?",
+      "confirm_clear_done": "Ta bort alla klara artiklar?"
+    },
+    "defaults": {
+      "sub_text": "Tips: Använd chips för att snabbt lägga till artiklar eller skanna streckkoder."
+    }
+  }
+}

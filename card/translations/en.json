@@ -1,0 +1,70 @@
+{
+  "card": {
+    "header": {
+      "title": "Shopping List Barcode"
+    },
+    "description": "Shopping list with barcode scanning, alphabetical sorting, and quick-add chips."
+  },
+  "barcode": {
+    "placeholder": "Enter barcode or scan with camera",
+    "lookup_button": "Lookup",
+    "scan_button": "Scan Barcode",
+    "manual_entry": "Enter Barcode",
+    "scanning": "Scanning...",
+    "not_found": "Product not found for barcode",
+    "camera_error": "Camera access denied or not available",
+    "processing": "Looking up product..."
+  },
+  "actions": {
+    "scan_barcode": "Scan Barcode",
+    "add_manual": "Add Manual",
+    "refresh": "Refresh"
+  },
+  "product": {
+    "unknown": "Unknown Product",
+    "add_anyway": "Add Anyway",
+    "edit_name": "Edit Product Name"
+  },
+  "success": {
+    "added_item": "Added \"{{name}}\" to shopping list",
+    "item_removed": "Item removed"
+  },
+  "errors": {
+    "empty_barcode": "Please enter a barcode",
+    "invalid_barcode": "Invalid barcode format. Must be 8-13 digits.",
+    "product_not_found": "Product not found. You can still add it manually.",
+    "lookup_failed": "Failed to lookup barcode. Please try again.",
+    "add_failed": "Failed to add item to shopping list",
+    "empty_input": "Please enter a product name or barcode",
+    "camera_disabled": "Camera scanning is disabled",
+    "browser_not_supported": "Barcode scanning requires camera access. Please allow camera permissions and try again.",
+    "camera_access_failed": "Camera access failed: {{message}}. Please check camera permissions in your browser settings.",
+    "camera_start_failed": "Unable to start camera. Please ensure camera permissions are granted and try again.",
+    "list_load_failed": "Failed to load shopping list",
+    "item_update_failed": "Failed to update item",
+    "item_remove_failed": "Failed to remove item"
+    ,
+    "no_todo_service": "Todo integration or service not available. Enable the Home Assistant Todo integration and select a todo.* entity in the card editor."
+  },
+  "editor": {
+    "placeholders": {
+      "quantity": "Quantity",
+      "item": "Item...",
+      "barcode": "Enter barcode..."
+    },
+    "labels": {
+      "add_button": "Add",
+      "scan_button": "📱 Scan",
+      "clear_button": "Clear completed",
+      "no_items": "No items",
+      "complete_btn": "Mark as done",
+      "plus_btn": "Increase quantity",
+      "minus_btn": "Decrease quantity or remove",
+      "confirm_remove": "Remove item: {item}?",
+      "confirm_clear_done": "Delete all completed items?"
+    },
+    "defaults": {
+      "sub_text": "Hint: Use chips to quickly add items or scan barcodes."
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "name": "barcode-card",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Home Assistant card for barcode-based shopping list management",
+  "main": "card/barcode-card.ts",
+  "scripts": {
+    "build": "vite build",
+    "test": "vitest",
+    "coverage": "vitest run --coverage",
+    "dev": "vite build",
+    "lint": "eslint .",
+    "setup": "cd testing && ./dev-setup.sh"
+  },
+  "keywords": [
+    "home-assistant",
+    "barcode",
+    "shopping-list",
+    "frontend-card",
+    "typescript",
+    "card"
+  ],
+  "author": "FredrikM97",
+  "license": "MIT",
+  "dependencies": {
+    "@kipk/load-ha-components": "^1.0.3",
+    "home-assistant-js-websocket": "^9.1.0",
+    "lit": "^3.3.1",
+    "localforage": "^1.10.0",
+    "quagga": "^0.6.16"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.46.3",
+    "@typescript-eslint/parser": "^8.46.3",
+    "eslint": "^9.15.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.2",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^4.0.8"
+  },
+  "lint-staged": {
+    "card/**/*.ts": [
+      "eslint --fix",
+      "git add"
+    ]
+  }
+}
