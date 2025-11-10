@@ -1,5 +1,5 @@
 import { LitElement, html, css } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { translate } from '../translations/translations.js';
 
 /**
@@ -8,6 +8,20 @@ import { translate } from '../translations/translations.js';
  */
 export class QuickChipsPanel extends LitElement {
   @property({ type: Array }) chips: string[] = [];
+  @state() private _items: Array<{ name: string; total?: number }> = [];
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.addEventListener('shopping-list-refresh', () => this._refreshChips());
+    this._refreshChips();
+  }
+
+  async _refreshChips() {
+    if (this.todoListService && this.entityId && typeof this.todoListService.getItems === 'function') {
+      this._items = await this.todoListService.getItems(this.entityId);
+      this.requestUpdate();
+    }
+  }
   @property({ type: Boolean }) disabled = false;
   @property({ type: String }) entityId: string = '';
   @property({ type: Object }) todoListService: any = null;
@@ -47,37 +61,32 @@ export class QuickChipsPanel extends LitElement {
   private async _handleChipClick(e: Event) {
     const target = e.currentTarget as HTMLElement;
     const productName = target.getAttribute('data-product') || target.textContent || '';
-    // Optionally, you could pass barcode or count if available
-    const barcode = '';
-    const count = 1;
     if (this.todoListService && this.entityId && productName) {
       try {
-        await this.todoListService.addItem(productName, this.entityId, { barcode, count });
+        await this.todoListService.addItem(productName, this.entityId);
+        // Refresh the shopping list after quick add
+        const shoppingListEl = (this.getRootNode() as any).querySelector?.('sl-shopping-list');
+        if (shoppingListEl && typeof (shoppingListEl as any).refresh === 'function') {
+          (shoppingListEl as any).refresh();
+        }
+        // Also refresh chips
+        this._refreshChips();
+        // Dispatch shopping-list-refresh event for other listeners
         this.dispatchEvent(new CustomEvent('shopping-list-refresh', { bubbles: true, composed: true }));
       } catch (error) {
         console.error('[QuickChipsPanel] Exception when handling quick add', { error, productName, entityId: this.entityId });
       }
-    } else {
-      console.warn('[QuickChipsPanel] Missing todoListService, entityId, or productName', { productName, entityId: this.entityId, hasService: !!this.todoListService });
     }
   }
 
   render() {
     // Sort chips by total presses (from description) and show top 15
     let sortedChips = this.chips;
-    if (this.todoListService && this.entityId) {
-      const items = this.todoListService.hass?.states?.[this.entityId]?.attributes?.items || [];
-      // Count total for each chip
-      const totals = {};
-      for (const item of items) {
-        const name = item.name;
-        const desc = item.description || '';
-        let total = 1;
-        const totalMatch = desc.match(/total:(\d+)/);
-        if (totalMatch) total = parseInt(totalMatch[1], 10);
-        totals[name] = (totals[name] || 0) + total;
-      }
-      sortedChips = [...this.chips].sort((a, b) => (totals[b] || 0) - (totals[a] || 0)).slice(0, 15);
+    if (this._items && this._items.length > 0) {
+      sortedChips = this._items
+        .sort((a, b) => (b.total ?? 0) - (a.total ?? 0))
+        .slice(0, 15)
+        .map(item => item.name);
     }
     return html`
       <div class="quick-chips-section">

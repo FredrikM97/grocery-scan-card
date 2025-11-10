@@ -1,5 +1,4 @@
 import { LitElement, html, css } from 'lit';
-import { ProductLookup } from '../services/product-lookup';
 import { property, state } from 'lit/decorators.js';
 import { translate } from '../translations/translations.js';
 import { ShoppingListService } from '../services/shopping-list-service';
@@ -9,6 +8,14 @@ import { ShoppingListService } from '../services/shopping-list-service';
  * Centralized add-item logic for barcode, manual, and quick add
  */
 export class AddItemPanel extends LitElement {
+  /**
+   * Allows parent to set the input value programmatically (e.g. from barcode scan)
+   */
+  public setInputValue(value: string) {
+    console.log('[AddItemPanel] setInputValue called with:', value);
+    this.inputValue = value;
+    this.requestUpdate();
+  }
  
   
   static styles = css`
@@ -18,164 +25,143 @@ export class AddItemPanel extends LitElement {
       align-items: center;
       width: 100%;
       margin-bottom: 16px;
-    }
-    .message {
-      padding: 12px 16px;
+      padding: 16px 0;
+      background: var(--card-background-color, #fff);
       border-radius: 8px;
-      margin: 8px 0;
-      font-size: 14px;
-      font-weight: 500;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .input-container {
+      display: flex;
+      flex-direction: row;
+      gap: 8px;
       width: 100%;
-      text-align: center;
+      justify-content: center;
+      align-items: stretch;
+      margin-top: 8px;
+      padding: 0 8px;
     }
-    .error-message {
-      background: #ffebee;
-      color: #c62828;
+    .add-item-input {
+      flex: 2;
+      min-width: 120px;
+      max-width: 220px;
+      padding: 8px 12px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid var(--divider-color, #e0e0e0);
+      outline: none;
+      box-sizing: border-box;
     }
-    .success-message {
-      background: #e8f5e8;
-      color: #2e7d32;
+    .add-item-count {
+      flex: 1;
+      min-width: 60px;
+      max-width: 80px;
+      padding: 8px 12px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid var(--divider-color, #e0e0e0);
+      outline: none;
+      box-sizing: border-box;
+    }
+    .btn.btn-primary {
+      flex: 1;
+      min-width: 80px;
+      max-width: 120px;
+      background: var(--primary-color, #2196f3);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 0;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-weight: 500;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .add-item-input, .add-item-count {
+      padding: 8px 12px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid var(--divider-color, #e0e0e0);
+      outline: none;
+      width: 180px;
+      box-sizing: border-box;
+    }
+    .add-item-count {
+      width: 80px;
+    }
+    .btn.btn-primary {
+      background: var(--primary-color, #2196f3);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-weight: 500;
+    }
+    .btn.btn-primary:disabled {
+      background: #bdbdbd;
+      color: #fff;
+      cursor: not-allowed;
+      opacity: 0.7;
     }
   `;
 
-  @property({ type: Object }) hass: any = null;
   @property({ type: Object }) todoListService: ShoppingListService = null;
-  private productLookup: ProductLookup;
   @property({ type: String }) entityId: string = '';
-  @state() private currentProduct: any = { name: '', count: 1 };
-  @state() private errorMessage: string = '';
-  @state() private successMessage: string = '';
+  @state() private inputValue: string = '';
+  @state() private inputCount: number = 1;
 
 
   constructor() {
     super();
-    console.log('[AddItemPanel] constructor called', { instance: this });
-    this.productLookup = new ProductLookup();
   }
-
-  connectedCallback() {
-    super.connectedCallback();
-    this.addEventListener('barcode-scanned', (e: any) => this._onBarcodeScanned(e.detail.barcode));
-    this.addEventListener('manual-add', (e: any) => {
-      console.log('[AddItemPanel] manual-add event received', { input: e.detail.input });
-      this._onManualAdd(e.detail.input);
-    });
-    this.addEventListener('confirm-add', () => {
-      console.log('[AddItemPanel] confirm-add event received', { currentProduct: this.currentProduct });
-      if (this.currentProduct && this.currentProduct.name) {
-        this._onAddItem(this.currentProduct.name);
-      } else {
-        this._showError('No product selected to add.');
-      }
-    });
-  }
-
-  async _onBarcodeScanned(barcode: string) {
-    this.currentProduct = { barcode, name: '', brand: '', source: 'scanned' };
-    if (this.productLookup) {
-      await this.productLookup.lookupBarcode(
-        barcode,
-        (product: any) => {
-          this.currentProduct = product;
-        },
-        (barcode: string) => this._showManualAddOption(barcode)
-      );
-    }
-  }
-
-  async _onAddItem(productName: string) {
-    console.log('[AddItemPanel] _onAddItem called', { productName, entityId: this.entityId, hasService: !!this.todoListService });
-    if (!this.todoListService || !productName || !this.entityId) {
-      console.warn('[AddItemPanel] Missing todoListService, entityId, or productName', { productName, entityId: this.entityId, hasService: !!this.todoListService });
-      this._showError('No todo list integration or product name.');
+  async _onAddItem() {
+    if (!this.todoListService || !this.inputValue || !this.entityId) {
+      console.error('No todo list integration or product name.');
       return;
     }
     try {
-      const barcode = this.currentProduct?.barcode || '';
-      const count = this.currentProduct?.count || 1;
-      const description = `barcode:${barcode};count:${count}`;
-      // Use ShoppingListService.addItem to handle count/total logic
-      const result = await this.todoListService.addItem(productName, this.entityId, description);
+      const description = `count:${this.inputCount}`;
+      const result = await this.todoListService.addItem(this.inputValue, this.entityId, description);
       if (result) {
-        this._showSuccess(`Added "${productName}" to todo list`);
         this.dispatchEvent(new CustomEvent('shopping-list-refresh', { bubbles: true, composed: true }));
-        console.log('[AddItemPanel] shopping-list-refresh dispatched');
       } else {
-        this._showError('Failed to add item to todo list');
+        console.error('Failed to add item to todo list');
       }
     } catch (error) {
-      console.error('[AddItemPanel] Exception when adding item', { error, productName, entityId: this.entityId });
-      this._showError('Failed to add item to todo list');
+      console.error('Failed to add item to todo list', error);
     }
-  }
-
-  async _onManualAdd(input: string) {
-    if (!input) {
-      this._showError(translate('errors.empty_input'));
-      return;
-    }
-    if (/^\d{8,13}$/.test(input) && this.productLookup) {
-      await this.productLookup.lookupBarcode(
-        input,
-        (product: any) => this._handleProductFound(product),
-        (barcode: string) => this._showManualAddOption(barcode)
-      );
-      return;
-    }
-    // Add as manual item
-    await this._onAddItem(input);
-  }
-
-  _handleProductFound(product: any) {
-    this.currentProduct = product;
-    // Do not add automatically, wait for user confirmation
-  }
-
-  _showManualAddOption(barcode: string) {
-    this.currentProduct = {
-      barcode: barcode,
-      name: `Product ${barcode}`,
-      brand: '',
-      source: 'manual'
-    };
-  }
-
-  _showError(message: string) {
-    this.errorMessage = message;
-    this.successMessage = '';
-  }
-  _showSuccess(message: string) {
-    this.successMessage = message;
-    this.errorMessage = '';
   }
 
   render() {
     return html`
       <div class="add-item-panel">
-        ${this.errorMessage ? html`<div class="message error-message">${this.errorMessage}</div>` : ''}
-        ${this.successMessage ? html`<div class="message success-message">${this.successMessage}</div>` : ''}
         <div class="input-container">
           <input
             type="text"
             class="add-item-input"
-            .value="${this.currentProduct?.name || ''}"
-            placeholder="${translate('add_item.placeholder') ?? 'Enter product name'}"
-            @input="${(e: any) => { this.currentProduct = { ...this.currentProduct, name: e.target.value }; }}"
+            .value="${this.inputValue}"
+            placeholder="${translate('editor.placeholders.item') ?? 'Enter product name'}"
+            @input="${(e: any) => { this.inputValue = e.target.value; this.requestUpdate(); }}"
           >
           <input
             type="number"
             min="1"
             class="add-item-count"
-            .value="${this.currentProduct?.count || 1}"
+            .value="${this.inputCount}"
             placeholder="Count"
-            @input="${(e: any) => { this.currentProduct = { ...this.currentProduct, count: Number(e.target.value) }; }}"
+            @input="${(e: any) => { this.inputCount = Number(e.target.value); }}"
           >
           <button
             class="btn btn-primary"
-            @click="${() => this.dispatchEvent(new CustomEvent('confirm-add', { bubbles: true, composed: true }))}"
-            ?disabled="${!this.currentProduct?.name}"
+            @click="${() => this._onAddItem()}"
           >
-            <span class="btn-text">${translate('add_item.add_button') ?? 'Add'}</span>
+            <span class="btn-text">${translate('editor.labels.add_button') || 'Add'}</span>
           </button>
         </div>
       </div>

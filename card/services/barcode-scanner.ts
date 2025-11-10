@@ -270,4 +270,3 @@ class BarcodeScanner {
 }
 
 export { BarcodeScanner };
-// ...existing code from barcode-scanner.ts will be moved here...

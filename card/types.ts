@@ -28,7 +28,10 @@ export interface Product {
 export interface ShoppingListItem {
     id: string;
     name: string;
-    complete: boolean;
+    completed: boolean;
+    barcode?: string;
+    count?: number;
+    total?: number;
 }
 
 // Custom Events

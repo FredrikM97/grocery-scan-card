@@ -14,27 +14,27 @@ export class ActionButton extends LitElement {
 
   static styles = css`
     button {
+      width: 100%;
+      box-sizing: border-box;
       padding: 12px 16px;
       border: none;
       border-radius: 4px;
       cursor: pointer;
       font-size: 14px;
       font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.2s ease;
       background: var(--primary-color, #2196f3);
       color: white;
+      transition: background 0.2s ease;
     }
     button.outlined {
       background: transparent;
       color: var(--primary-color, #2196f3);
       border: 1px solid var(--primary-color, #2196f3);
     }
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
+    button:hover {
+      background: var(--primary-color-hover, #1976d2);
+      color: #fff;
+      filter: brightness(1.1);
     }
     ha-icon {
       --mdc-icon-size: 20px;

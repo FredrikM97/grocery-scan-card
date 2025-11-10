@@ -13,9 +13,19 @@ export class ActionsSection extends LitElement {
   static styles = css`
     .actions-section {
       display: flex;
-      gap: 8px;
+      width: 100%;
+      justify-content: stretch;
+      align-items: stretch;
       margin-bottom: 16px;
-      flex-wrap: wrap;
+      gap: 0;
+    }
+    sl-action-button {
+      flex: 1 1 0;
+      min-width: 0;
+      width: 100%;
+      margin: 0;
+      height: 48px;
+      box-sizing: border-box;
     }
   `;
 
@@ -46,10 +56,10 @@ export class ActionsSection extends LitElement {
           ?disabled="${this.disabled}"
         ></sl-action-button>
         <sl-action-button
-          icon="mdi:refresh"
-          .label="${translate('actions.refresh')}"
+          icon="mdi:format-list-bulleted"
+          .label="${translate('actions.show_list') ?? 'Show Shopping List'}"
           outlined
-          @action-click="${this._handleRefresh}"
+          @action-click="${() => this.dispatchEvent(new CustomEvent('show-shopping-list', { bubbles: true, composed: true }))}"
           ?disabled="${this.disabled}"
         ></sl-action-button>
       </div>
