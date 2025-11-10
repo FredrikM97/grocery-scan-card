@@ -1,4 +1,12 @@
-# TODO
+# Shopping Scan List
+## About
+This is a plugin for home assistant to scan items with the barcode to add them to a shopping list. This plugin is based on the todo lists to store information so no other integration is needed.
+
+## Development
+Simplest to UI test is to use `npm run setup` to start local docker container with home assistant. To update the card run `npm run build:ha`
+
+
+## TODO
 * Add groups to filter 
 * Fix the support for products instead of only barcode
 * Somehow fix to select barcode from specific countries.. Like in sweden if barcode match with item in US then keep the swedish one

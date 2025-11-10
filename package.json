@@ -10,9 +10,9 @@
     "coverage": "vitest run --coverage",
     "dev": "vite build",
     "lint": "eslint .",
-    "setup": "cd testing && ./dev-setup.sh"
+    "setup": "cd dev && ./dev-setup.sh"
     ,
-    "build:ha": "npm run build && cp dist/barcode-card.js testing/config/www/barcode-card.js"
+    "build:ha": "npm run build && cp dist/barcode-card.js dev/config/www/barcode-card.js"
   },
   "keywords": [
     "home-assistant",

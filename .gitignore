@@ -1,5 +1,5 @@
-testing/config/
-testing/hass_venv/
+dev/config/
+dev/hass_venv/
 node_modules/
 dist/
 dist-ssr/
