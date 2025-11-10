@@ -7,7 +7,7 @@ import './action-button.js';
  * <actions-renderer>
  * Encapsulates the action buttons for barcode-card
  */
-export class ActionsSection extends LitElement {
+export class ActionsPanel extends LitElement {
   @property({ type: Boolean }) disabled = false;
 
   static styles = css`
@@ -57,7 +57,7 @@ export class ActionsSection extends LitElement {
         ></sl-action-button>
         <sl-action-button
           icon="mdi:format-list-bulleted"
-          .label="${translate('actions.show_list') ?? 'Show Shopping List'}"
+          .label="${translate('actions.show_list')}"
           outlined
           @action-click="${() => this.dispatchEvent(new CustomEvent('show-shopping-list', { bubbles: true, composed: true }))}"
           ?disabled="${this.disabled}"
@@ -67,4 +67,4 @@ export class ActionsSection extends LitElement {
   }
 }
 
-customElements.define('sl-actions-section', ActionsSection);
+customElements.define('sl-actions-panel', ActionsPanel);

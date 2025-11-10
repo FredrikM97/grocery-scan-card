@@ -10,39 +10,17 @@ import { ShoppingListService } from './services/item-service';
 import './components/actions-panel';
 import './components/quick-chips-panel';
 import './components/scanner-overlay';
-import './components/add-item-panel';
-import { AddItemPanel } from './components/add-item-panel';
+import './components/input-panel';
+import { InputPanel } from './components/input-panel';
 import './components/shopping-list-overlay';
 import type { BarcodeCardConfig, Product } from './types';
+import { loadHaComponents } from '@kipk/load-ha-components';
 
 @customElement('barcode-card')
 export class BarcodeCard extends LitElement {
-    @state() private showShoppingListModal: boolean = false;
-    _openShoppingListModal() {
-        this.showShoppingListModal = true;
-    }
+    addItemPanelRef: InputPanel | null = null;
 
-    _closeShoppingListModal() {
-        this.showShoppingListModal = false;
-    }
-
-    _renderShoppingListModal() {
-        if (!this.showShoppingListModal) return html``;
-        return html`
-            <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;">
-                <div style="background:#fff;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,0.2);padding:24px;min-width:340px;max-width:96vw;max-height:90vh;overflow:auto;position:relative;">
-                    <button @click="${() => this._closeShoppingListModal()}" style="position:absolute;top:12px;right:12px;background:transparent;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
-                    <sl-shopping-list
-                        .listManager="${this.todoListService}"
-                        .entityId="${this.config?.entity}"
-                    ></sl-shopping-list>
-                </div>
-            </div>
-        `;
-    }
-    addItemPanelRef: AddItemPanel | null = null;
-
-    connectedCallback() {
+    async connectedCallback() {
         super.connectedCallback();
         this.addEventListener('add-item', (e: CustomEvent) => this._handleAddItem(e));
         this.addEventListener('barcode-scanned', async (e: CustomEvent) => {
@@ -61,9 +39,8 @@ export class BarcodeCard extends LitElement {
                 (shoppingListEl as any).refresh();
             }
         });
-        this.addEventListener('show-shopping-list', () => {
-            this._openShoppingListModal();
-        });
+        // No longer handle show-shopping-list here; handled by overlay component
+       
     }
     set hass(hass: any) {
         this._hass = hass;
@@ -105,7 +82,7 @@ export class BarcodeCard extends LitElement {
     constructor() {
         super();
         this.productLookup = new ProductLookup();
-    this.todoListService = new ShoppingListService(this._hass);
+        this.todoListService = new ShoppingListService(this._hass);
     }
 
     setConfig(config: BarcodeCardConfig) {
@@ -119,25 +96,20 @@ export class BarcodeCard extends LitElement {
     render() {
         return html`
             <div class="card-container">
-                <!-- Card Header with Show Shopping List Button -->
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 12px 0 12px;">
-                    <span style="font-size:1.2rem;font-weight:600;">Shopping List Card</span>
-                    <button @click="${() => this._openShoppingListModal()}" style="background:var(--primary-color,#2196f3);color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:1rem;">Show Shopping List</button>
-                </div>
                 <!-- Scanner Overlay -->
                 <sl-scanner-overlay></sl-scanner-overlay>
                 <!-- Actions Section -->
-                <sl-actions-section
+                <sl-actions-panel
                     .disabled="${this.isLoading}"
                     @scan-barcode="${() => this.dispatchEvent(new CustomEvent('enable-scanner', { bubbles: true, composed: true }))}"
-                ></sl-actions-section>
+                ></sl-actions-panel>
 
                 <!-- Add Item Panel (handles both manual and barcode input) -->
-                <sl-add-item-panel
+                <sl-input-panel
                     .entityId="${this.config?.entity}"
                     .todoListService="${this.todoListService}"
-                    ${el => { this.addItemPanelRef = el as AddItemPanel; }}
-                ></sl-add-item-panel>
+                    ${el => { this.addItemPanelRef = el as InputPanel; }}
+                ></sl-input-panel>
 
                 <!-- Quick Chips Section -->
                 <sl-quick-chips-panel
@@ -146,8 +118,11 @@ export class BarcodeCard extends LitElement {
                     .todoListService="${this.todoListService}"
                 ></sl-quick-chips-panel>
 
-                <!-- Shopping List Modal (to be implemented) -->
-                ${this._renderShoppingListModal()}
+                <!-- Shopping List Modal (handled by overlay component) -->
+                <sl-shopping-list-overlay
+                    .listManager="${this.todoListService}"
+                    .entityId="${this.config?.entity}"
+                ></sl-shopping-list-overlay>
             </div>
         `;
     }

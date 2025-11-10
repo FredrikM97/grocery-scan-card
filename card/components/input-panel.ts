@@ -7,7 +7,7 @@ import { ShoppingListService } from '../services/item-service.js';
  * <add-item-panel>
  * Centralized add-item logic for barcode, manual, and quick add
  */
-export class AddItemPanel extends LitElement {
+export class InputPanel extends LitElement {
   /**
    * Allows parent to set the input value programmatically (e.g. from barcode scan)
    */
@@ -169,4 +169,4 @@ export class AddItemPanel extends LitElement {
   }
 }
 
-customElements.define('sl-add-item-panel', AddItemPanel);
+customElements.define('sl-input-panel', InputPanel);

@@ -2,12 +2,37 @@ import { LitElement, html, css } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { translate } from '../translations/translations.js';
 import { ShoppingListItem } from '../types.js';
+import { loadHaComponents } from '@kipk/load-ha-components';
 
 /**
  * <shopping-list>
  * Self-contained shopping list component
  */
-export class ShoppingList extends LitElement {
+export class ShoppingListOverlay extends LitElement {
+  @state() private open: boolean = false;
+
+  async connectedCallback() {
+    super.connectedCallback();
+    await loadHaComponents(['ha-dialog']);
+    window.addEventListener('show-shopping-list', this._handleShowShoppingList);
+    console.log('[ShoppingList] connectedCallback');
+    this._refreshShoppingList();
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener('show-shopping-list', this._handleShowShoppingList);
+    super.disconnectedCallback();
+  }
+
+  private _handleShowShoppingList = () => {
+    this.open = true;
+    this.requestUpdate();
+  }
+
+  private _handleClose = () => {
+    this.open = false;
+    this.requestUpdate();
+  }
   protected willUpdate(changedProps: Map<string, any>) {
     console.log('[ShoppingList] willUpdate', {
       changedProps: Array.from(changedProps.entries()),
@@ -206,12 +231,6 @@ export class ShoppingList extends LitElement {
   `;
 
 
-  connectedCallback() {
-  super.connectedCallback();
-  console.log('[ShoppingList] connectedCallback');
-  this._refreshShoppingList();
-  }
-
   public refresh() {
     console.log('[ShoppingList] refresh called');
     this._refreshShoppingList();
@@ -269,55 +288,62 @@ export class ShoppingList extends LitElement {
   }
 
   render() {
-  console.log('[ShoppingList RENDER] items:', this.items);
-  console.log('[ShoppingList RENDER] incomplete count:', this.items.filter(i => !i.completed).length);
-  return html`
-      <div class="shopping-list">
-        <div class="list-header">
-          <h3 style="width:100%;text-align:center;display:flex;align-items:center;justify-content:center;gap:12px;">
-            <span style="font-weight:600;flex:1;text-align:center;">
-              ${translate('shopping_list.title') ?? 'Shopping List'}
-              <span style="font-size:14px;font-weight:400;color:var(--primary-color,#2196f3);margin-left:8px;">
-                (${this.items.filter(i => !i.completed).length} to buy)
-              </span>
-            </span>
-            <span class="collapse-icon" @click="${() => this.collapsed = !this.collapsed}" title="${this.collapsed ? 'Expand List' : 'Collapse List'}" style="flex-shrink:0;">
-              <ha-icon icon="${this.collapsed ? 'mdi:chevron-down' : 'mdi:chevron-up'}"></ha-icon>
-            </span>
-          </h3>
-        </div>
-        ${this.errorMessage ? html`<div class="message error-message">${this.errorMessage}</div>` : ''}
-        ${this.successMessage ? html`<div class="message success-message">${this.successMessage}</div>` : ''}
-  <div class="list-items${this.collapsed ? ' collapsed' : ''}">
-          <div class="list-header-row">
-            <span class="header-item">Item</span>
-            <span class="header-count">Count</span>
-            <span class="header-total">Total</span>
-            <span class="header-actions"></span>
+    if (!this.open) return html``;
+    return html`
+      <ha-dialog .open=${this.open}>
+        <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;">
+          <div style="background:#fff;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,0.2);padding:24px;min-width:340px;max-width:96vw;max-height:90vh;overflow:auto;position:relative;">
+            <button @click="${this._handleClose}" style="position:absolute;top:12px;right:12px;background:transparent;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+            <!-- Shopping list content -->
+            <div class="shopping-list">
+              <div class="list-header">
+                <h3 style="width:100%;text-align:center;display:flex;align-items:center;justify-content:center;gap:12px;">
+                  <span style="font-weight:600;flex:1;text-align:center;">
+                    ${translate('shopping_list.title') ?? 'Shopping List'}
+                    <span style="font-size:14px;font-weight:400;color:var(--primary-color,#2196f3);margin-left:8px;">
+                      (${this.items.filter(i => !i.completed).length} to buy)
+                    </span>
+                  </span>
+                  <span class="collapse-icon" @click="${() => this.collapsed = !this.collapsed}" title="${this.collapsed ? 'Expand List' : 'Collapse List'}" style="flex-shrink:0;">
+                    <ha-icon icon="${this.collapsed ? 'mdi:chevron-down' : 'mdi:chevron-up'}"></ha-icon>
+                  </span>
+                </h3>
+              </div>
+              ${this.errorMessage ? html`<div class="message error-message">${this.errorMessage}</div>` : ''}
+              ${this.successMessage ? html`<div class="message success-message">${this.successMessage}</div>` : ''}
+              <div class="list-items${this.collapsed ? ' collapsed' : ''}">
+                <div class="list-header-row">
+                  <span class="header-item">Item</span>
+                  <span class="header-count">Count</span>
+                  <span class="header-total">Total</span>
+                  <span class="header-actions"></span>
+                </div>
+                ${Array.isArray(this.items)
+                  ? this.items
+                      .filter(item => !item.completed)
+                      .map((item: ShoppingListItem) => html`
+                        <div class="list-item">
+                          <span style="flex:2;display:flex;align-items:center;">
+                            <input type="checkbox" class="item-checkbox" .checked="${item.completed}" @change="${() => this._toggleItem(item.id)}" ?disabled="${this.disabled}">
+                            <span class="item-name${item.completed ? ' completed' : ''}" style="margin-left:8px;">${item.name}</span>
+                          </span>
+                          <span style="flex:1;text-align:right;">${item.count !== undefined ? item.count : ''}</span>
+                          <span style="flex:1;text-align:right;">${item.total !== undefined ? item.total : ''}</span>
+                          <span class="item-actions">
+                            <button class="btn-outline" @click="${() => this._removeItem(item.id)}" title="Remove item" ?disabled="${this.disabled}">
+                              <ha-icon icon="mdi:delete" style="color:var(--primary-color,#2196f3);"></ha-icon>
+                            </button>
+                          </span>
+                        </div>
+                      `)
+                  : html`<div class="message">items is not an array</div>`}
+              </div>
+            </div>
           </div>
-          ${Array.isArray(this.items)
-            ? this.items
-                .filter(item => !item.completed)
-                .map((item: ShoppingListItem) => html`
-                  <div class="list-item">
-                    <span style="flex:2;display:flex;align-items:center;">
-                      <input type="checkbox" class="item-checkbox" .checked="${item.completed}" @change="${() => this._toggleItem(item.id)}" ?disabled="${this.disabled}">
-                      <span class="item-name${item.completed ? ' completed' : ''}" style="margin-left:8px;">${item.name}</span>
-                    </span>
-                    <span style="flex:1;text-align:right;">${item.count !== undefined ? item.count : ''}</span>
-                    <span style="flex:1;text-align:right;">${item.total !== undefined ? item.total : ''}</span>
-                    <span class="item-actions">
-                      <button class="btn-outline" @click="${() => this._removeItem(item.id)}" title="Remove item" ?disabled="${this.disabled}">
-                        <ha-icon icon="mdi:delete" style="color:var(--primary-color,#2196f3);"></ha-icon>
-                      </button>
-                    </span>
-                  </div>
-                `)
-            : html`<div class="message">items is not an array</div>`}
         </div>
-      </div>
+      </ha-dialog>
     `;
   }
 }
 
-customElements.define('sl-shopping-list', ShoppingList);
+customElements.define('sl-shopping-list-overlay', ShoppingListOverlay);
