@@ -1,4 +1,11 @@
 {
+  "shopping_list":{
+    "title": "Shopping List",
+    "item": "Item",
+    "count": "Count",
+    "total": "Total",
+    "actions": "Actions"
+  },
   "card": {
     "header": {
       "title": "Shopping List Barcode"
@@ -51,9 +58,6 @@
   "quick_add": {
     "title": "Quick Add",
     "subtitle": "Top 15 most added items"
-  },
-  "shopping_list": {
-    "title": "Shopping List"
   },
   "editor": {
     "placeholders": {

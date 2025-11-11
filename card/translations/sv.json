@@ -1,4 +1,8 @@
 {
+  "shopping_list.item": "Artikel",
+  "shopping_list.count": "Antal",
+  "shopping_list.total": "Totalt",
+  "shopping_list.actions": "Åtgärder",
   "card": {
     "header": {
       "title": "Inköpslista Streckkod"

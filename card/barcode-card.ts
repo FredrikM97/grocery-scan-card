@@ -79,7 +79,17 @@ export class BarcodeCard extends LitElement {
         (shoppingListEl as any).refresh();
       }
     });
-    // No longer handle show-shopping-list here; handled by overlay component
+    // Listen for show-shopping-list and open overlay
+    this.addEventListener("show-shopping-list", () => {
+      const overlay = this.renderRoot.querySelector("sl-shopping-list-overlay") as any;
+      if (overlay && typeof overlay.showDialog === "function") {
+        overlay.showDialog({
+          entityId: this.config?.entity,
+          listManager: this.todoListService,
+          disabled: this.isLoading,
+        });
+      }
+    });
   }
   set hass(hass: any) {
     this._hass = hass;
@@ -132,6 +142,7 @@ export class BarcodeCard extends LitElement {
         <sl-shopping-list-overlay
           .listManager="${this.todoListService}"
           .entityId="${this.config?.entity}"
+          .hass="${this._hass}"
         ></sl-shopping-list-overlay>
       </div>
     `;
