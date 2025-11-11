@@ -138,11 +138,13 @@ export class ShoppingListOverlay extends LitElement {
         color: #2e7d32;
       }
 
-      .sl-shopping-list-modal {
-        padding: 16px;
-        max-width: 900px;
-        box-sizing: border-box;
-      }
+        .sl-shopping-list-modal {
+          padding: 16px;
+          max-width: 1200px;
+          width: 95vw;
+          min-width: 400px;
+          box-sizing: border-box;
+        }
       .sl-shopping-list-modal-bg {
         display: flex;
         align-items: center;
