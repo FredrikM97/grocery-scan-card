@@ -3,6 +3,7 @@ import { loadHaComponents } from "@kipk/load-ha-components";
 import { LitElement, html, css } from "lit";
 import { property, state } from "lit/decorators.js";
 import { fireEvent } from "../common";
+import { ProductLookup } from "../services/product-service";
 
 // Add type definition if not available in DOM lib
 declare global {
@@ -41,6 +42,16 @@ export class BarcodeScannerDialog extends LitElement {
   @property({ type: Object }) hass?: any;
   @property({ type: Object }) barcode?: any;
   @property({ type: Object }) format?: any;
+  @property({ type: Object }) todoListService: any = null;
+  @property({ type: String }) entityId: string = "";
+  @property({ type: Object }) productLookup: ProductLookup = null;
+
+  constructor() {
+    super();
+    if (!this.productLookup) {
+      this.productLookup = new ProductLookup();
+    }
+  }
   
   @state() open = false;
   private stream: MediaStream | null = null;
@@ -101,7 +112,45 @@ export class BarcodeScannerDialog extends LitElement {
             this.barcode = rawValue;
             this.format = format;
             console.log(`[ScannerOverlay] Detected barcode: ${rawValue} (format: ${format})`);
-            fireEvent(this, "barcode-detected", { detail: { value: rawValue, format } });
+            // Lookup product and add to todo list
+            
+              console.log(`[ScannerOverlay] Starting product lookup for barcode: ${rawValue}`);
+              await this.productLookup.lookupBarcode(
+                rawValue,
+                async (product: any) => {
+                  console.log(`[ScannerOverlay] Product found:`, product);
+                  let nameToAdd = product.name || rawValue;
+                  if (product.brand) {
+                    nameToAdd += ` (${product.brand})`;
+                  }
+                  if (!this.todoListService) {
+                    console.error('[ScannerOverlay] todoListService is null, cannot add item');
+                    return;
+                  }
+                  if (!this.entityId) {
+                    console.error('[ScannerOverlay] entityId is null, cannot add item');
+                    return;
+                  }
+                  const description = `barcode:${product.barcode || rawValue}`;
+                  const result = await this.todoListService.addItem(nameToAdd, this.entityId, description);
+                  console.log(`[ScannerOverlay] Added to todo list:`, { name: nameToAdd, entityId: this.entityId, description, result });
+                },
+                async (barcode: string) => {
+                  console.log(`[ScannerOverlay] Product not found, adding barcode as name: ${barcode}`);
+                  if (!this.todoListService) {
+                    console.error('[ScannerOverlay] todoListService is null, cannot add item');
+                    return;
+                  }
+                  if (!this.entityId) {
+                    console.error('[ScannerOverlay] entityId is null, cannot add item');
+                    return;
+                  }
+                  const description = `barcode:${barcode}`;
+                  const result = await this.todoListService.addItem(barcode, this.entityId, description);
+                  console.log(`[ScannerOverlay] Added to todo list:`, { name: barcode, entityId: this.entityId, description, result });
+                }
+              );
+          
             this.stopScanner();
             this.closeDialog();
             return;

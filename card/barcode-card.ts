@@ -116,7 +116,11 @@ export class BarcodeCard extends LitElement {
     return html`
       <div class="card-container">
         <!-- Scanner Overlay -->
-        <sl-scanner-overlay></sl-scanner-overlay>
+        <sl-scanner-overlay
+          .todoListService="${this.todoListService}"
+          .entityId="${this.config?.entity}"
+          .productLookup="${this.productLookup}"
+        ></sl-scanner-overlay>
         <!-- Actions Section -->
 
         <div class="actions-section">
@@ -134,7 +138,7 @@ export class BarcodeCard extends LitElement {
           ></sl-action-button>
           <sl-action-button
             icon="mdi:format-list-bulleted"
-            .label="${translate("actions.show_list")}"
+            .label="${translate("actions.show_list")}" 
             outlined
             @action-click="${this._handleShowShoppingListOverlay}"
           ></sl-action-button>
