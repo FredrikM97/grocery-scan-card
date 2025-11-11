@@ -1,7 +1,7 @@
-import { LitElement, html, css } from 'lit';
-import { property } from 'lit/decorators.js';
-import { translate } from '../translations/translations.js';
-import './action-button.js';
+import { LitElement, html, css } from "lit";
+import { property } from "lit/decorators.js";
+import { translate } from "../translations/translations.js";
+import "./action-button.js";
 
 /**
  * <actions-renderer>
@@ -30,13 +30,19 @@ export class ActionsPanel extends LitElement {
   `;
 
   private _handleScan(e: Event) {
-    this.dispatchEvent(new CustomEvent('scan-barcode', { bubbles: true, composed: true }));
+    this.dispatchEvent(
+      new CustomEvent("scan-barcode", { bubbles: true, composed: true }),
+    );
   }
   private _handleLookup(e: Event) {
-    this.dispatchEvent(new CustomEvent('lookup', { bubbles: true, composed: true }));
+    this.dispatchEvent(
+      new CustomEvent("lookup", { bubbles: true, composed: true }),
+    );
   }
   private _handleRefresh(e: Event) {
-    this.dispatchEvent(new CustomEvent('refresh-list', { bubbles: true, composed: true }));
+    this.dispatchEvent(
+      new CustomEvent("refresh-list", { bubbles: true, composed: true }),
+    );
   }
 
   render() {
@@ -44,22 +50,28 @@ export class ActionsPanel extends LitElement {
       <div class="actions-section">
         <sl-action-button
           icon="mdi:camera"
-          .label="${translate('actions.scan_barcode')}"
+          .label="${translate("actions.scan_barcode")}"
           @action-click="${this._handleScan}"
           ?disabled="${this.disabled}"
         ></sl-action-button>
         <sl-action-button
           icon="mdi:magnify"
-          .label="${translate('actions.lookup') ?? 'Lookup'}"
+          .label="${translate("actions.lookup") ?? "Lookup"}"
           outlined
           @action-click="${this._handleLookup}"
           ?disabled="${this.disabled}"
         ></sl-action-button>
         <sl-action-button
           icon="mdi:format-list-bulleted"
-          .label="${translate('actions.show_list')}"
+          .label="${translate("actions.show_list")}"
           outlined
-          @action-click="${() => this.dispatchEvent(new CustomEvent('show-shopping-list', { bubbles: true, composed: true }))}"
+          @action-click="${() =>
+            this.dispatchEvent(
+              new CustomEvent("show-shopping-list", {
+                bubbles: true,
+                composed: true,
+              }),
+            )}"
           ?disabled="${this.disabled}"
         ></sl-action-button>
       </div>
@@ -67,4 +79,4 @@ export class ActionsPanel extends LitElement {
   }
 }
 
-customElements.define('sl-actions-panel', ActionsPanel);
+customElements.define("sl-actions-panel", ActionsPanel);

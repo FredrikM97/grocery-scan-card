@@ -29,9 +29,7 @@
         "python.formatting.provider": "black",
         "python.testing.pytestEnabled": true,
         "python.testing.unittestEnabled": false,
-        "python.testing.pytestArgs": [
-          "tests"
-        ],
+        "python.testing.pytestArgs": ["tests"],
         "typescript.preferences.includePackageJsonAutoImports": "on",
         "typescript.updateImportsOnFileMove.enabled": "always",
         "eslint.validate": ["typescript"]

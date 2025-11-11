@@ -45,8 +45,7 @@
     "camera_start_failed": "Unable to start camera. Please ensure camera permissions are granted and try again.",
     "list_load_failed": "Failed to load shopping list",
     "item_update_failed": "Failed to update item",
-    "item_remove_failed": "Failed to remove item"
-    ,
+    "item_remove_failed": "Failed to remove item",
     "no_todo_service": "Todo integration or service not available. Enable the Home Assistant Todo integration and select a todo.* entity in the card editor."
   },
   "quick_add": {

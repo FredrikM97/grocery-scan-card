@@ -1,5 +1,5 @@
-import { LitElement, html, css } from 'lit';
-import { property } from 'lit/decorators.js';
+import { LitElement, html, css } from "lit";
+import { property } from "lit/decorators.js";
 
 /**
  * ActionButton - reusable button for actions in barcode-card
@@ -7,8 +7,8 @@ import { property } from 'lit/decorators.js';
  * <action-button icon="mdi:camera" label="Scan" @click="..." />
  */
 export class ActionButton extends LitElement {
-  @property({ type: String }) icon = '';
-  @property({ type: String }) label = '';
+  @property({ type: String }) icon = "";
+  @property({ type: String }) label = "";
   @property({ type: Boolean }) outlined = false;
   @property({ type: Boolean }) disabled = false;
 
@@ -44,9 +44,10 @@ export class ActionButton extends LitElement {
   render() {
     return html`
       <button
-        class="${this.outlined ? 'outlined' : ''}"
+        class="${this.outlined ? "outlined" : ""}"
         ?disabled="${this.disabled}"
-        @click="${(e: Event) => this.dispatchEvent(new CustomEvent('action-click', { detail: e }))}"
+        @click="${(e: Event) =>
+          this.dispatchEvent(new CustomEvent("action-click", { detail: e }))}"
       >
         <ha-icon icon="${this.icon}"></ha-icon>
         <span>${this.label}</span>
@@ -55,4 +56,4 @@ export class ActionButton extends LitElement {
   }
 }
 
-customElements.define('sl-action-button', ActionButton);
+customElements.define("sl-action-button", ActionButton);

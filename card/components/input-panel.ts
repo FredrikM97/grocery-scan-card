@@ -1,23 +1,19 @@
-import { LitElement, html, css } from 'lit';
-import { property, state } from 'lit/decorators.js';
-import { translate } from '../translations/translations.js';
-import { ShoppingListService } from '../services/item-service.js';
+import { LitElement, html, css } from "lit";
+import { property, state } from "lit/decorators.js";
+import { SHOPPING_LIST_REFRESH_EVENT } from "../const";
+import { translate } from "../translations/translations.js";
+import { ShoppingListService } from "../services/item-service.js";
 
 /**
  * <add-item-panel>
  * Centralized add-item logic for barcode, manual, and quick add
  */
 export class InputPanel extends LitElement {
-  /**
-   * Allows parent to set the input value programmatically (e.g. from barcode scan)
-   */
-  public setInputValue(value: string) {
-    console.log('[AddItemPanel] setInputValue called with:', value);
-    this.inputValue = value;
-    this.requestUpdate();
-  }
- 
-  
+  @property({ type: Object }) todoListService: ShoppingListService = null;
+  @property({ type: String }) entityId: string = "";
+  @state() private inputValue: string = "";
+  @state() private inputCount: number = 1;
+
   static styles = css`
     .add-item-panel {
       display: flex;
@@ -28,7 +24,7 @@ export class InputPanel extends LitElement {
       padding: 16px 0;
       background: var(--card-background-color, #fff);
       border-radius: 8px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
     }
     .input-container {
       display: flex;
@@ -80,7 +76,8 @@ export class InputPanel extends LitElement {
       align-items: center;
       justify-content: center;
     }
-    .add-item-input, .add-item-count {
+    .add-item-input,
+    .add-item-count {
       padding: 8px 12px;
       font-size: 16px;
       border-radius: 6px;
@@ -111,30 +108,40 @@ export class InputPanel extends LitElement {
     }
   `;
 
-  @property({ type: Object }) todoListService: ShoppingListService = null;
-  @property({ type: String }) entityId: string = '';
-  @state() private inputValue: string = '';
-  @state() private inputCount: number = 1;
-
-
   constructor() {
     super();
   }
+
+  public setInputValue(value: string) {
+    console.log("[AddItemPanel] setInputValue called with:", value);
+    this.inputValue = value;
+    this.requestUpdate();
+  }
+
   async _onAddItem() {
     if (!this.todoListService || !this.inputValue || !this.entityId) {
-      console.error('No todo list integration or product name.');
+      console.error("No todo list integration or product name.");
       return;
     }
     try {
       const description = `count:${this.inputCount}`;
-      const result = await this.todoListService.addItem(this.inputValue, this.entityId, description);
+      const result = await this.todoListService.addItem(
+        this.inputValue,
+        this.entityId,
+        description,
+      );
       if (result) {
-        this.dispatchEvent(new CustomEvent('shopping-list-refresh', { bubbles: true, composed: true }));
+        this.dispatchEvent(
+          new CustomEvent(SHOPPING_LIST_REFRESH_EVENT, {
+            bubbles: true,
+            composed: true,
+          }),
+        );
       } else {
-        console.error('Failed to add item to todo list');
+        console.error("Failed to add item to todo list");
       }
     } catch (error) {
-      console.error('Failed to add item to todo list', error);
+      console.error("Failed to add item to todo list", error);
     }
   }
 
@@ -146,22 +153,27 @@ export class InputPanel extends LitElement {
             type="text"
             class="add-item-input"
             .value="${this.inputValue}"
-            placeholder="${translate('editor.placeholders.item') ?? 'Enter product name'}"
-            @input="${(e: any) => { this.inputValue = e.target.value; this.requestUpdate(); }}"
-          >
+            placeholder="${translate("editor.placeholders.item") ??
+            "Enter product name"}"
+            @input="${(e: any) => {
+              this.inputValue = e.target.value;
+              this.requestUpdate();
+            }}"
+          />
           <input
             type="number"
             min="1"
             class="add-item-count"
             .value="${this.inputCount}"
             placeholder="Count"
-            @input="${(e: any) => { this.inputCount = Number(e.target.value); }}"
-          >
-          <button
-            class="btn btn-primary"
-            @click="${() => this._onAddItem()}"
-          >
-            <span class="btn-text">${translate('editor.labels.add_button') || 'Add'}</span>
+            @input="${(e: any) => {
+              this.inputCount = Number(e.target.value);
+            }}"
+          />
+          <button class="btn btn-primary" @click="${() => this._onAddItem()}">
+            <span class="btn-text"
+              >${translate("editor.labels.add_button") || "Add"}</span
+            >
           </button>
         </div>
       </div>
@@ -169,4 +181,4 @@ export class InputPanel extends LitElement {
   }
 }
 
-customElements.define('sl-input-panel', InputPanel);
+customElements.define("sl-input-panel", InputPanel);
