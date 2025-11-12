@@ -151,8 +151,9 @@ export class BarcodeScannerDialog extends LitElement {
   }
 
   public closeDialog() {
-    this.stopScanner();
-    this.open = false;
+  this.stopScanner();
+  this.open = false;
+  this.banner = null;
   }
 
   async startScanner() {
@@ -161,6 +162,10 @@ export class BarcodeScannerDialog extends LitElement {
         "BarcodeDetector not supported in this browser",
       );
       return;
+    }
+    // Clear error if camera is available
+    if (this.banner) {
+      this.banner = null;
     }
     await this.updateComplete;
     this.video = this.shadowRoot!.querySelector("video") as HTMLVideoElement;
