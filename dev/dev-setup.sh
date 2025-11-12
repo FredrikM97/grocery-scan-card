@@ -50,7 +50,7 @@ sleep 2
 
 # Build the card first
 echo "📦 Building Barcode Card..."
-cd .. && npm run build && cd testing
+cd .. && npm run build && cd dev
 mkdir -p ./config/www && cp ../dist/barcode-card.js ./config/www/
 
 # Ensure config directory is set up properly
