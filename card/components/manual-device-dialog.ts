@@ -1,50 +1,59 @@
 import { LitElement, html, css } from "lit";
 import { property, state } from "lit/decorators.js";
 import type { ShoppingListService } from "../services/item-service";
+import "./sl-dialog-overlay";
 
 export class ManualDeviceDialog extends LitElement {
-  @property({ type: Boolean }) open = false;
+
   @property({ type: Object }) todoListService: ShoppingListService | null = null;
   @property({ type: String }) entityId: string = "";
 
+  @state() open = false;
   @state() name: string = "";
   @state() barcode: string = "";
   @state() brand: string = "";
 
   static styles = css`
-    ha-dialog, dialog {
-      --dialog-max-width: 480px;
-      background: var(--ha-card-background, var(--card-background-color, #fff));
-      color: var(--ha-card-text-color, var(--primary-text-color, #333));
-      border-radius: var(--ha-card-border-radius, 12px);
-      box-shadow: var(--ha-card-box-shadow, 0 2px 8px rgba(0, 0, 0, 0.1));
-      font-family: var(--ha-font-family, var(--paper-font-body1_-_font-family, system-ui));
-    }
     .dialog-content {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      padding: 16px;
+      gap: 18px;
+      padding: 8px 0 0 0;
     }
-    input {
+    label {
       font-size: 1em;
-      padding: 8px;
-      border-radius: var(--ha-action-border-radius, 6px);
-      border: 1px solid var(--ha-primary-color, #2196f3);
+      color: var(--ha-card-text-color, var(--primary-text-color, #333));
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-weight: 500;
+    }
+    input[type="text"] {
+      font-size: 1em;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1.5px solid var(--ha-primary-color, #2196f3);
       background: var(--ha-card-background, var(--card-background-color, #fff));
       color: var(--ha-card-text-color, var(--primary-text-color, #333));
+      outline: none;
+      transition: border-color 0.18s;
+      margin-top: 2px;
     }
-    
+    input[type="text"]:focus {
+      border-color: var(--ha-secondary-color, #1976d2);
+      box-shadow: 0 0 0 2px rgba(33,150,243,0.08);
+    }
+    ha-button {
+      min-width: 100px;
+    }
   `;
 
   openDialog() {
     this.open = true;
-    this.requestUpdate();
   }
 
   closeDialog() {
     this.open = false;
-    this.requestUpdate();
   }
 
   async _addDevice() {
@@ -62,21 +71,24 @@ export class ManualDeviceDialog extends LitElement {
   }
 
   render() {
+    console.log("ManualDeviceDialog render, open:", this.open);
     return html`
-      <dialog ?open=${this.open} style="z-index:10000;">
-        <h2>Add Device Manually</h2>
+      <sl-dialog-overlay .open=${this.open}>
+        <span slot="title">Add Device Manually</span>
         <div class="dialog-content">
           <label>Name:<br /><input type="text" .value=${this.name} @input=${(e: any) => this.name = e.target.value} /></label>
           <label>Barcode:<br /><input type="text" .value=${this.barcode} @input=${(e: any) => this.barcode = e.target.value} /></label>
           <label>Brand:<br /><input type="text" .value=${this.brand} @input=${(e: any) => this.brand = e.target.value} /></label>
+        </div>
+        <span slot="footer">
           <ha-button type="button" @click=${() => this._addDevice()}>
             Add Device
           </ha-button>
           <ha-button type="button" @click=${() => this.closeDialog()}>
             Cancel
           </ha-button>
-        </div>
-      </dialog>
+        </span>
+      </sl-dialog-overlay>
     `;
   }
 }

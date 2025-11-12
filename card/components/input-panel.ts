@@ -50,7 +50,6 @@ export class InputPanel extends LitElement {
 
   public setInputValue(value: string) {
     this.inputValue = value;
-    this.requestUpdate();
   }
 
   async _onAddItem() {
@@ -86,7 +85,6 @@ export class InputPanel extends LitElement {
             placeholder="${translate("editor.placeholders.item") ?? "Enter product name"}"
             @input="${(e: any) => {
               this.inputValue = e.target.value;
-              this.requestUpdate();
             }}"
           ></ha-textfield>
           <ha-textfield

@@ -19,19 +19,10 @@ import { translate } from "./translations/translations";
 import { fireEvent, HA_CARD_REQUIRED_HA_COMPONENTS } from "./common";
 import { BarcodeScannerDialog } from "./components/scanner-overlay";
 import { loadHaComponents } from "@kipk/load-ha-components";
+import { ManualDeviceDialog } from "./components/manual-device-dialog";
 
 @customElement("barcode-card")
 export class BarcodeCard extends LitElement {
-  private _handleShowManualDeviceDialog() {
-    this.updateComplete.then(() => {
-      const dialog = this.shadowRoot?.querySelector('sl-manual-device-dialog');
-      if (dialog && 'openDialog' in dialog) {
-        (dialog as any).openDialog();
-      } else {
-        console.error('Manual device dialog not found or openDialog not available', dialog);
-      }
-    });
-  }
   @property({ type: Object }) config?: BarcodeCardConfig;
   productLookup: ProductLookup | null = null;
   todoListService: ShoppingListService | null = null;
@@ -122,6 +113,11 @@ export class BarcodeCard extends LitElement {
   private _handleShowScannerOverlay() {
     const query =
       this.shadowRoot.querySelector<BarcodeScannerDialog>("sl-scanner-overlay")!;
+    query?.openDialog();
+  }
+
+  private _handleShowManualDeviceDialog() {
+    const query = this.shadowRoot.querySelector<ManualDeviceDialog>("sl-manual-device-dialog")!;
     query?.openDialog();
   }
 

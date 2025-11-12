@@ -6,6 +6,7 @@ import { ShoppingListItem } from "../types.js";
 import { ShoppingListStatus } from "../types.js";
 import { fireEvent } from "../common.js";
 import { ShoppingListService } from "../services/item-service.js";
+import "./sl-dialog-overlay";
 
 @customElement("sl-shopping-list-overlay")
 export class ShoppingListOverlay extends LitElement {
@@ -20,9 +21,36 @@ export class ShoppingListOverlay extends LitElement {
 
   static styles = [
     css`
-      .dialog-header {
+      ha-data-table {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: 100%;
+        overflow: auto;
+      }
+      .message.error-message {
+        background: #ffebee;
+        color: #c62828;
+        padding: 6px 10px;
+        border-radius: 6px;
+        margin: 8px 0;
         text-align: center;
-        margin: 16px 0 8px 0;
+      }
+      .message.success-message {
+        background: #e8f5e8;
+        color: #2e7d32;
+        padding: 6px 10px;
+        border-radius: 6px;
+        margin: 8px 0;
+        text-align: center;
+      }
+      sl-dialog-overlay::part(dialog-wrapper) {
+        min-height: 600px;
+        max-height: 95vh;
+        min-width: 600px;
+        max-width: 98vw;
       }
     `,
   ];
@@ -33,13 +61,15 @@ export class ShoppingListOverlay extends LitElement {
         title: "Done",
         type: "icon-button",
         template: (row) => html`
-          <ha-checkbox
-            .checked=${row.completed}
-            @change=${(e) => {
-              if (!row.completed) this._toggleItem(row.id);
-            }}
-            title="Mark as completed"
-          ></ha-checkbox>
+          <span class="center-cell">
+            <ha-checkbox
+              .checked=${row.completed}
+              @change=${(e) => {
+                if (!row.completed) this._toggleItem(row.id);
+              }}
+              title="Mark as completed"
+            ></ha-checkbox>
+          </span>
         `,
       },
       name: {
@@ -47,28 +77,42 @@ export class ShoppingListOverlay extends LitElement {
         main: true,
         sortable: true,
         filterable: true,
+        minWidth: "120px",
+        template: (row) => html`
+          <p class="ellipsis-cell">
+            ${row.name}
+          </p>
+        `,
       },
       brand: {
-        title: translate("shopping_list.brand") || "Brand",
+        title: translate("shopping_list.brand"),
         sortable: true,
         filterable: true,
+        minWidth: "120px",
+        template: (row) => html`
+          <p class="ellipsis-cell">
+            ${row.brand && row.brand.trim() ? row.brand : '—'}
+          </p>
+        `,
       },
       count: {
         title: translate("shopping_list.count"),
         type: "numeric",
         sortable: true,
+        minWidth: "80px",
       },
       total: {
         title: translate("shopping_list.total"),
         type: "numeric",
         sortable: true,
+        minWidth: "80px",
       },
       actions: {
         title: translate("shopping_list.actions"),
-        type: "icon",
+        type: "icon-button",
         template: (row) => html`
           <span
-            style="display: flex; align-items: center; cursor: pointer;"
+            class="center-cell"
             @click=${(e) => { this._removeItem(row.id); }}
             title="Delete item"
           >
@@ -86,7 +130,6 @@ export class ShoppingListOverlay extends LitElement {
 
   public closeDialog() {
     this.open = false;
-    this.requestUpdate();
   }
 
   disconnectedCallback() {
@@ -97,7 +140,6 @@ export class ShoppingListOverlay extends LitElement {
     if (this.listManager && this.entityId) {
       try {
         this.items = await this.listManager.getItems(this.entityId);
-        this.requestUpdate();
       } catch (error) {
         this._showError("Failed to load shopping list items");
       }
@@ -142,38 +184,28 @@ export class ShoppingListOverlay extends LitElement {
       ? this.items.filter((item) => item && item.status === ShoppingListStatus.NeedsAction)
       : [];
     return html`
-      <ha-dialog .open=${this.open}>
-      <h3 class="dialog-header">
-        ${translate("shopping_list.title") ?? "Shopping List"}
-        <span class="dialog-header-count">(${data.length} to buy)</span>
-      </h3>
-      ${this.errorMessage
-        ? html`<div
-            class="message error-message"
-            style="background:#ffebee; color:#c62828;"
-          >
-            ${this.errorMessage}
-          </div>`
-        : ""}
-      ${this.successMessage
-        ? html`<div
-            class="message success-message"
-            style="background:#e8f5e8; color:#2e7d32;"
-          >
-            ${this.successMessage}
-          </div>`
-        : ""}
-      <ha-data-table
-        .columns=${this.getColumns()}
-        .data=${data}
-        .hass=${this.hass}
-        id="shopping-list-table"
-        autoHeight
-      ></ha-data-table>
-      <div slot="primaryAction">
-        <ha-button @click=${this.closeDialog} title="Close">Close</ha-button>
-      </div>
-      </ha-dialog>
+      <sl-dialog-overlay .open=${this.open}>
+        <span slot="title">${translate("shopping_list.title")} (${data.length} to buy)</span>
+        <span slot="header">${translate("shopping_list.subtitle") ?? ""}</span>
+        <div>
+          ${this.errorMessage
+            ? html`<div class="message error-message">${this.errorMessage}</div>`
+            : ""}
+          ${this.successMessage
+            ? html`<div class="message success-message">${this.successMessage}</div>`
+            : ""}
+          <ha-data-table
+            .columns=${this.getColumns()}
+            .data=${data}
+            .hass=${this.hass}
+            id="shopping-list-table"
+            autoHeight
+          ></ha-data-table>
+        </div>
+        <span slot="footer">
+          <ha-button @click=${this.closeDialog} title="Close">${translate("shopping_list.close") ?? "Close"}</ha-button>
+        </span>
+      </sl-dialog-overlay>
     `;
   }
 }

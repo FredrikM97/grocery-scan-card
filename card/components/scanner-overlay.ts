@@ -4,6 +4,7 @@ import { property, state } from "lit/decorators.js";
 import { fireEvent } from "../common";
 import { ProductLookup } from "../services/product-service";
 import { SUPPORTED_BARCODE_FORMATS } from "../const";
+import "./sl-dialog-overlay";
 
 // Add type definition if not available in DOM lib
 declare global {
@@ -39,14 +40,6 @@ export class BarcodeScannerDialog extends LitElement {
   };
 
   static styles = css`
-    ha-dialog, dialog {
-      --dialog-max-width: 480px;
-      background: var(--ha-card-background, var(--card-background-color, #fff));
-      color: var(--ha-card-text-color, var(--primary-text-color, #333));
-      border-radius: var(--ha-card-border-radius, 12px);
-      box-shadow: var(--ha-card-box-shadow, 0 2px 8px rgba(0, 0, 0, 0.1));
-      font-family: var(--ha-font-family, var(--paper-font-body1_-_font-family, system-ui));
-    }
     video {
       width: 100%;
       border-radius: var(--ha-card-border-radius, 8px);
@@ -66,6 +59,9 @@ export class BarcodeScannerDialog extends LitElement {
       border: 1px solid var(--ha-primary-color, #2196f3);
       background: var(--ha-card-background, var(--card-background-color, #fff));
       color: var(--ha-card-text-color, var(--primary-text-color, #333));
+      width: 90%;
+      margin-bottom: 8px;
+      box-sizing: border-box;
     }
     .button-row {
       display: flex;
@@ -115,7 +111,6 @@ export class BarcodeScannerDialog extends LitElement {
     this.apiProduct = null;
     this.open = true;
     if (this.open) await this.startScanner();
-    this.requestUpdate();
   }
 
 
@@ -123,7 +118,6 @@ export class BarcodeScannerDialog extends LitElement {
     console.log("[ScannerOverlay] closeDialog called");
     this.stopScanner();
     this.open = false;
-    this.requestUpdate();
   }
 
   async startScanner() {
@@ -141,7 +135,14 @@ export class BarcodeScannerDialog extends LitElement {
     }
     this.stream = await navigator.mediaDevices.getUserMedia({ video: true });
     video.srcObject = this.stream;
-    await video.play();
+    try {
+      await video.play();
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        console.error("Video play failed", err);
+      }
+      // Ignore AbortError, it's expected if play is interrupted
+    }
     console.log("[ScannerOverlay] Video stream started");
 
     this.detector = new BarcodeDetector({
@@ -158,12 +159,11 @@ export class BarcodeScannerDialog extends LitElement {
           (product: any) => {
             this.apiProduct = product;
             this.editState = this.createEditProduct(product, barcode);
-            this.requestUpdate();
+         
           },
           (barcode: string) => {
             this.apiProduct = null;
             this.editState = this.createEditProduct(null, barcode);
-            this.requestUpdate();
           }
         );
       } catch (err) {
@@ -175,6 +175,11 @@ export class BarcodeScannerDialog extends LitElement {
     const detectLoop = async () => {
       if (!this.open || !this.detector) return;
       try {
+        // Only try to detect if video is ready and has a stream
+        if (video.readyState < 2 || !video.srcObject) {
+          requestAnimationFrame(detectLoop);
+          return;
+        }
         const barcodes = await this.detector.detect(video);
         if (barcodes.length === 0) {
           requestAnimationFrame(detectLoop);
@@ -207,59 +212,69 @@ export class BarcodeScannerDialog extends LitElement {
       this.stream.getTracks().forEach((t) => t.stop());
       this.stream = null;
     }
+    const video = this.shadowRoot?.querySelector("video");
+    if (video) {
+      video.pause();
+      video.srcObject = null;
+    }
   }
 
   render() {
     console.log("[ScannerOverlay] render called, open:", this.open);
     return html`
-      <dialog ?open=${this.open} style="z-index:10000;">
-        <h2>Scan a Barcode</h2>
-        <video id="video" autoplay ?hidden=${!!this.scanState.barcode}></video>
-        <p>
+      <sl-dialog-overlay .open=${this.open}>
+        <span slot="title">Scan a Barcode</span>
+        <span slot="header">${this.scanState.barcode ? `Detected: ${this.scanState.barcode} (${this.scanState.format})` : ""}</span>
+        <div>
+          <video id="video" autoplay ?hidden=${!!this.scanState.barcode}></video>
+          <p>
+            ${this.scanState.barcode
+              ? ""
+              : "Point camera at barcode"}
+          </p>
           ${this.scanState.barcode
-            ? `Detected: ${this.scanState.barcode} (${this.scanState.format})`
-            : "Point camera at barcode"}
-        </p>
-        ${this.scanState.barcode
-          ? html`
-              <div style="margin-top:16px;">
-                <label>
-                  Name:<br />
-                  <input
-                    type="text"
-                    .value=${this.editState.name}
-                    @input=${(e: any) => { this.editState = { ...this.editState, name: e.target.value }; this.requestUpdate(); }}
-                    style="width:90%;margin-bottom:8px;"
-                  />
-                </label>
-                <br />
-                <label>
-                  Brand:<br />
-                  <input
-                    type="text"
-                    .value=${this.editState.brand}
-                    @input=${(e: any) => { this.editState = { ...this.editState, brand: e.target.value }; this.requestUpdate(); }}
-                    style="width:90%;margin-bottom:8px;"
-                  />
-                </label>
-                <div class="button-row">
-                  <ha-button type="button" @click=${() => this._addToList()}>
-                    Add to List
-                  </ha-button>
-                  <ha-button type="button" @click=${() => (this.closeDialog())}>
-                    Close
-                  </ha-button>
+            ? html`
+                <div style="margin-top:16px;">
+                  <label>
+                    Name:<br />
+                    <input
+                      type="text"
+                      .value=${this.editState.name}
+                      @input=${(e: any) => { this.editState = { ...this.editState, name: e.target.value };  }}
+                      style="width:90%;margin-bottom:8px;"
+                    />
+                  </label>
+                  <br />
+                  <label>
+                    Brand:<br />
+                    <input
+                      type="text"
+                      .value=${this.editState.brand}
+                      @input=${(e: any) => { this.editState = { ...this.editState, brand: e.target.value }; }}
+                      style="width:90%;margin-bottom:8px;"
+                    />
+                  </label>
                 </div>
-              </div>
-            `
-          : html`
-              <div class="button-row">
+              `
+            : ""}
+        </div>
+        <span slot="footer">
+          ${this.scanState.barcode
+            ? html`
+                <ha-button type="button" @click=${() => this._addToList()}>
+                  Add to List
+                </ha-button>
                 <ha-button type="button" @click=${() => (this.closeDialog())}>
                   Close
                 </ha-button>
-              </div>
-            `}
-      </dialog>
+              `
+            : html`
+                <ha-button type="button" @click=${() => (this.closeDialog())}>
+                  Close
+                </ha-button>
+              `}
+        </span>
+      </sl-dialog-overlay>
     `;
   }
   

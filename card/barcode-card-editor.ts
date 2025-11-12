@@ -70,13 +70,11 @@ export class BarcodeCardEditor extends LitElement {
 
   async connectedCallback() {
     super.connectedCallback();
-    this.requestUpdate();
   }
 
   setConfig(config: BarcodeCardConfig): void {
     console.log("[BarcodeCardEditor] setConfig called", config);
     this.config = { ...config };
-    this.requestUpdate();
   }
 
   render() {
