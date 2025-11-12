@@ -22,17 +22,17 @@ This is very early development and I might rewrite everything again depending on
 
 Simplest to UI test is to use `npm run setup` to start local docker container with home assistant. To update the card run `npm run build:ha`
 
-[build-shield]: https://github.com/FredrikM97/shopping-scan-card/actions/workflows/test.yaml/badge.svg
-[build]: https://github.com/FredrikM97/shopping-scan-card/actions
-[codecov-shield]: https://codecov.io/gh/FredrikM97/shopping-scan-card/branch/dev/graph/badge.svg
-[codecov]: https://codecov.io/gh/FredrikM97/shopping-scan-card
-[license-shield]: https://img.shields.io/github/license/FredrikM97/shopping-scan-card.svg
+[build-shield]: https://github.com/FredrikM97/grocery-scan-scard/actions/workflows/test.yaml/badge.svg
+[build]: https://github.com/FredrikM97/grocery-scan-scard/actions
+[codecov-shield]: https://codecov.io/gh/FredrikM97/grocery-scan-scard/branch/dev/graph/badge.svg
+[codecov]: https://codecov.io/gh/FredrikM97/grocery-scan-scard
+[license-shield]: https://img.shields.io/github/license/FredrikM97/grocery-scan-scard.svg
 [devcontainer-shield]: https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode
-[devcontainer]: https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/FredrikM97/shopping-scan-card
-[ha-versions-shield]: https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/FredrikM97/shopping-scan-card/main/hacs.json&label=homeassistant&query=$.homeassistant&color=blue&logo=homeassistant
-[releases-shield]: https://img.shields.io/github/release/FredrikM97/shopping-scan-card.svg
-[releases]: https://github.com/FredrikM97/shopping-scan-card/releases
+[devcontainer]: https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/FredrikM97/grocery-scan-scard
+[ha-versions-shield]: https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/FredrikM97/grocery-scan-scard/main/hacs.json&label=homeassistant&query=$.homeassistant&color=blue&logo=homeassistant
+[releases-shield]: https://img.shields.io/github/release/FredrikM97/grocery-scan-scard.svg
+[releases]: https://github.com/FredrikM97/grocery-scan-scard/releases
 [wiki-shield]: https://img.shields.io/badge/docs-wiki-blue.svg
-[wiki]: https://github.com/FredrikM97/shopping-scan-card/wiki
-[homeassistant]: https://my.home-assistant.io/redirect/hacs_repository/?owner=FredrikM97&repository=shopping-scan-card&category=plugin
-[downloads-shield]: https://img.shields.io/github/downloads/FredrikM97/shopping-scan-card/total.svg
+[wiki]: https://github.com/FredrikM97/grocery-scan-scard/wiki
+[homeassistant]: https://my.home-assistant.io/redirect/hacs_repository/?owner=FredrikM97&repository=grocery-scan-scard&category=plugin
+[downloads-shield]: https://img.shields.io/github/downloads/FredrikM97/grocery-scan-scard/total.svg
