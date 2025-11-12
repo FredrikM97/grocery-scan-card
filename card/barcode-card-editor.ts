@@ -133,21 +133,6 @@ export class BarcodeCardEditor extends LitElement {
             />
           </div>
         </div>
-        <div class="section-header">Display Options</div>
-        <div class="config-row">
-          <div class="config-label">
-            Show Header Toggle
-            <div class="description">Display toggle button in card header</div>
-          </div>
-          <div class="config-input">
-            <input
-              type="checkbox"
-              id="show_header_toggle"
-              .checked="${this.config?.show_header_toggle !== false}"
-              @change="${this._updateConfig}"
-            />
-          </div>
-        </div>
       </div>
     `;
   }

@@ -1,12 +1,12 @@
 /**
  * ShoppingListService - Unified Home Assistant shopping/todo list service
  */
-import { TODO_ADD_ITEM, TODO_CLEAR_COMPLETED, TODO_DOMAIN, TODO_UPDATE_ITEM, TODO_CALL_SERVICE, TODO_GET_ITEMS } from "../const";
+import { TODO_ADD_ITEM, TODO_CLEAR_COMPLETED, TODO_DOMAIN, TODO_UPDATE_ITEM, TODO_CALL_SERVICE, TODO_GET_ITEMS, TODO_DELETE_ITEM, SHOPPING_LIST_REFRESH_EVENT } from "../const";
+import { fireEvent } from "../common";
 import { ShoppingListItem, ShoppingListStatus } from "../types";
 
 
 export class ShoppingListService {
-  // Only one hass property should exist, remove duplicate
 
   private hass: Record<string, unknown>;
 
@@ -34,6 +34,7 @@ export class ShoppingListService {
       (item.barcode ?? "") === (itemData.barcode ?? "")
     );
 
+    let result = false;
     if (existing) {
       const updatedItem = this.getUpdatedItem(existing, itemData);
       const newDesc = this.itemToDescription(updatedItem);
@@ -43,19 +44,22 @@ export class ShoppingListService {
         description: newDesc,
         status: updatedItem.status,
       });
-      return true;
+      result = true;
+    } else {
+      // No existing item: create new
+      result = await this.createNewItem({
+        id: "", // will be set by backend
+        name,
+        status: ShoppingListStatus.NeedsAction,
+        barcode: itemData.barcode ?? "",
+        brand: itemData.brand,
+        count: itemData.count ?? 1,
+        total: itemData.count ?? 1,
+      }, entityId);
     }
-
-    // No existing item: create new
-    return await this.createNewItem({
-      id: "", // will be set by backend
-      name,
-      status: ShoppingListStatus.NeedsAction,
-      barcode: itemData.barcode ?? "",
-      brand: itemData.brand,
-      count: itemData.count ?? 1,
-      total: itemData.count ?? 1,
-    }, entityId);
+      fireEvent(window as any, SHOPPING_LIST_REFRESH_EVENT, {});
+  
+    return result;
   }
 
   // Helper to process item update logic
@@ -143,6 +147,7 @@ export class ShoppingListService {
         status: completedItem.status,
         description: newDesc,
       });
+      fireEvent(window as any, SHOPPING_LIST_REFRESH_EVENT, { item: completedItem });
       return true;
     } catch (error) {
       return false;
@@ -181,4 +186,17 @@ export class ShoppingListService {
       return false;
     }
   }
+  async removeItem(itemId: string, entityId: string): Promise<boolean> {
+  try {
+    await (this.hass as any).callService(TODO_DOMAIN, TODO_DELETE_ITEM, {
+      entity_id: entityId,
+      item: itemId, // UID or name
+    });
+    fireEvent(window as any, SHOPPING_LIST_REFRESH_EVENT, { item: itemId });
+    return true;
+  } catch (error) {
+    console.error("[ShoppingListService] removeItem failed", error);
+    return false;
+  }
+}
 }

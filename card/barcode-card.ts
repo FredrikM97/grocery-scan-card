@@ -11,6 +11,7 @@ import "./components/quick-chips-panel";
 import "./components/action-button";
 import "./components/input-panel";
 import "./components/shopping-list-overlay";
+import "./components/manual-device-dialog";
 import "./components/scanner-overlay";
 import type { BarcodeCardConfig, Product } from "./types";
 import { ShoppingListOverlay } from "./components/shopping-list-overlay";
@@ -21,6 +22,16 @@ import { loadHaComponents } from "@kipk/load-ha-components";
 
 @customElement("barcode-card")
 export class BarcodeCard extends LitElement {
+  private _handleShowManualDeviceDialog() {
+    this.updateComplete.then(() => {
+      const dialog = this.shadowRoot?.querySelector('sl-manual-device-dialog');
+      if (dialog && 'openDialog' in dialog) {
+        (dialog as any).openDialog();
+      } else {
+        console.error('Manual device dialog not found or openDialog not available', dialog);
+      }
+    });
+  }
   @property({ type: Object }) config?: BarcodeCardConfig;
   productLookup: ProductLookup | null = null;
   todoListService: ShoppingListService | null = null;
@@ -29,12 +40,12 @@ export class BarcodeCard extends LitElement {
 
   static styles = css`
     .card-container {
-      background: var(--card-background-color, #fff);
-      border-radius: 12px;
-      padding: 0;
+      background: var(--ha-card-background, var(--card-background-color, #fff));
+      border-radius: var(--ha-card-border-radius, 12px);
+      padding: var(--ha-card-padding, 0);
       box-shadow: var(--ha-card-box-shadow, 0 2px 8px rgba(0, 0, 0, 0.1));
-      color: var(--primary-text-color, #333);
-      font-family: var(--paper-font-body1_-_font-family, system-ui);
+      color: var(--ha-card-text-color, var(--primary-text-color, #333));
+      font-family: var(--ha-font-family, var(--paper-font-body1_-_font-family, system-ui));
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -43,25 +54,20 @@ export class BarcodeCard extends LitElement {
     }
     @media (max-width: 600px) {
       .card-container {
-        padding: 12px;
+        padding: var(--ha-card-mobile-padding, 12px);
       }
     }
     .actions-section {
       display: flex;
       width: 100%;
-      justify-content: stretch;
-      align-items: stretch;
-      margin-bottom: 16px;
-      gap: 0;
+      background: var(--ha-card-background, var(--card-background-color, #fff));
+      border: 1px solid var(--divider-color, #e0e0e0);
+      overflow: hidden;
+      margin-bottom: var(--ha-card-actions-margin-bottom, 16px);
     }
-    sl-action-button {
-      flex: 1 1 0;
-      min-width: 0;
-      width: 100%;
-      margin: 0;
-      height: 48px;
-      box-sizing: border-box;
-    }
+  
+
+
   `;
 
   constructor() {
@@ -120,11 +126,16 @@ export class BarcodeCard extends LitElement {
       productLookup: this.productLookup,
     };
     return html`
-      <div class="card-container">
+      <ha-card>
         <!-- Scanner Overlay -->
         <sl-scanner-overlay
           .serviceState="${serviceState}"
         ></sl-scanner-overlay>
+        <!-- Manual Device Dialog -->
+        <sl-manual-device-dialog
+          .todoListService="${this.todoListService}"
+          .entityId="${this.config?.entity}"
+        ></sl-manual-device-dialog>
         <!-- Actions Section -->
 
         <div class="actions-section">
@@ -134,16 +145,13 @@ export class BarcodeCard extends LitElement {
             @action-click="${this._handleShowScannerOverlay}"
           ></sl-action-button>
           <sl-action-button
-            icon="mdi:magnify"
-            .label="${translate("actions.lookup") ?? "Lookup"}"
-            outlined
-            @action-click="${() =>
-              fireEvent(this, "lookup", { bubbles: true, composed: true })}"
+           icon="mdi:camera"
+            .label="${translate("actions.add_item")}" 
+            @action-click="${this._handleShowManualDeviceDialog}"
           ></sl-action-button>
           <sl-action-button
             icon="mdi:format-list-bulleted"
             .label="${translate("actions.show_list")}" 
-            outlined
             @action-click="${this._handleShowShoppingListOverlay}"
           ></sl-action-button>
         </div>
@@ -156,7 +164,6 @@ export class BarcodeCard extends LitElement {
 
         <!-- Quick Chips Section -->
         <sl-quick-chips-panel
-          .chips="${["Milk", "Bread", "Eggs", "Butter", "Cheese"]}"
           .entityId="${this.config?.entity}"
           .todoListService="${this.todoListService}"
         ></sl-quick-chips-panel>
@@ -167,7 +174,7 @@ export class BarcodeCard extends LitElement {
           .entityId="${this.config?.entity}"
           .hass="${this._hass}"
         ></sl-shopping-list-overlay>
-      </div>
+      </ha-card>
     `;
   }
 }

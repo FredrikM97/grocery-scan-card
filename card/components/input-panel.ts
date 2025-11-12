@@ -25,7 +25,6 @@ export class InputPanel extends LitElement {
       margin-bottom: 16px;
       padding: 16px 0;
       background: var(--card-background-color, #fff);
-      border-radius: 8px;
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
     }
     .input-container {
@@ -34,79 +33,14 @@ export class InputPanel extends LitElement {
       gap: 8px;
       width: 100%;
       justify-content: center;
-      align-items: stretch;
+      align-items: center;
       margin-top: 8px;
       padding: 0 8px;
     }
-    .add-item-input {
-      flex: 2;
-      min-width: 120px;
-      max-width: 220px;
-      padding: 8px 12px;
-      font-size: 16px;
-      border-radius: 6px;
-      border: 1px solid var(--divider-color, #e0e0e0);
-      outline: none;
-      box-sizing: border-box;
-    }
-    .add-item-count {
-      flex: 1;
-      min-width: 60px;
-      max-width: 80px;
-      padding: 8px 12px;
-      font-size: 16px;
-      border-radius: 6px;
-      border: 1px solid var(--divider-color, #e0e0e0);
-      outline: none;
-      box-sizing: border-box;
-    }
-    .btn.btn-primary {
-      flex: 1;
-      min-width: 80px;
-      max-width: 120px;
-      background: var(--primary-color, #2196f3);
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 10px 0;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background 0.2s;
-      font-weight: 500;
-      box-sizing: border-box;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .add-item-input,
-    .add-item-count {
-      padding: 8px 12px;
-      font-size: 16px;
-      border-radius: 6px;
-      border: 1px solid var(--divider-color, #e0e0e0);
-      outline: none;
-      width: 180px;
-      box-sizing: border-box;
-    }
-    .add-item-count {
-      width: 80px;
-    }
-    .btn.btn-primary {
-      background: var(--primary-color, #2196f3);
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background 0.2s;
-      font-weight: 500;
-    }
-    .btn.btn-primary:disabled {
-      background: #bdbdbd;
-      color: #fff;
-      cursor: not-allowed;
-      opacity: 0.7;
+    ha-button {
+      height: 40px;
+      align-self: center;
+      /* Match the height of ha-textfield for vertical alignment */
     }
   `;
 
@@ -115,7 +49,6 @@ export class InputPanel extends LitElement {
   }
 
   public setInputValue(value: string) {
-    console.log("[AddItemPanel] setInputValue called with:", value);
     this.inputValue = value;
     this.requestUpdate();
   }
@@ -135,9 +68,7 @@ export class InputPanel extends LitElement {
         this.entityId,
         item,
       );
-      if (result) {
-        fireEvent(this, SHOPPING_LIST_REFRESH_EVENT, { item: result });
-      } else {
+      if (!result) {
         console.error("Failed to add item to todo list");
       }
     } catch (error) {
@@ -149,32 +80,29 @@ export class InputPanel extends LitElement {
     return html`
       <div class="add-item-panel">
         <div class="input-container">
-          <input
+          <ha-textfield
             type="text"
-            class="add-item-input"
             .value="${this.inputValue}"
-            placeholder="${translate("editor.placeholders.item") ??
-            "Enter product name"}"
+            placeholder="${translate("editor.placeholders.item") ?? "Enter product name"}"
             @input="${(e: any) => {
               this.inputValue = e.target.value;
               this.requestUpdate();
             }}"
-          />
-          <input
+          ></ha-textfield>
+          <ha-textfield
             type="number"
             min="1"
-            class="add-item-count"
-            .value="${this.inputCount}"
+            .value="${String(this.inputCount)}"
             placeholder="Count"
             @input="${(e: any) => {
               this.inputCount = Number(e.target.value);
             }}"
-          />
-          <button class="btn btn-primary" @click="${() => this._onAddItem()}">
-            <span class="btn-text"
-              >${translate("editor.labels.add_button") || "Add"}</span
-            >
-          </button>
+          ></ha-textfield>
+          <ha-button
+            @click="${() => this._onAddItem()}"
+          >
+            ${translate("editor.labels.add_button")}
+          </ha-button>
         </div>
       </div>
     `;

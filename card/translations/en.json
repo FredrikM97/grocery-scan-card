@@ -4,7 +4,8 @@
     "item": "Item",
     "count": "Count",
     "total": "Total",
-    "actions": "Actions"
+    "actions": "Actions",
+    "brand": "Brand"
   },
   "card": {
     "header": {
@@ -28,7 +29,9 @@
     "refresh": "Refresh",
     "add_product": "Add Product",
     "groups": "Groups",
-    "lookup": "Lookup"
+    "lookup": "Lookup",
+    "show_list": "Show List",
+    "add_item": "Add Item"
   },
   "product": {
     "unknown": "Unknown Product",
@@ -57,7 +60,8 @@
   },
   "quick_add": {
     "title": "Quick Add",
-    "subtitle": "Top 15 most added items"
+    "subtitle": "Top 15 most added items",
+    "empty": "No quick add items available"
   },
   "editor": {
     "placeholders": {
@@ -66,7 +70,7 @@
       "barcode": "Enter barcode..."
     },
     "labels": {
-      "add_button": "Add",
+      "add_button": "Quick Add",
       "scan_button": "📱 Scan",
       "clear_button": "Clear completed",
       "no_items": "No items",

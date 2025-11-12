@@ -3,11 +3,13 @@ import { SHOPPING_LIST_REFRESH_EVENT } from "../const";
 import { customElement, property, state } from "lit/decorators.js";
 import { translate } from "../translations/translations.js";
 import { ShoppingListItem } from "../types.js";
+import { ShoppingListStatus } from "../types.js";
 import { fireEvent } from "../common.js";
+import { ShoppingListService } from "../services/item-service.js";
 
 @customElement("sl-shopping-list-overlay")
 export class ShoppingListOverlay extends LitElement {
-  @property({ type: Object }) listManager: any = null;
+  @property({ type: Object }) listManager: ShoppingListService = null;
   @property({ type: String }) entityId: string = "";
   @property({ type: Object }) hass: any = null;
 
@@ -46,6 +48,11 @@ export class ShoppingListOverlay extends LitElement {
         sortable: true,
         filterable: true,
       },
+      brand: {
+        title: translate("shopping_list.brand") || "Brand",
+        sortable: true,
+        filterable: true,
+      },
       count: {
         title: translate("shopping_list.count"),
         type: "numeric",
@@ -58,13 +65,15 @@ export class ShoppingListOverlay extends LitElement {
       },
       actions: {
         title: translate("shopping_list.actions"),
-        type: "icon-button",
+        type: "icon",
         template: (row) => html`
-          <ha-icon-button
-            icon="mdi:delete"
-            @click=${(e) => this._removeItem(row.id)}
+          <span
+            style="display: flex; align-items: center; cursor: pointer;"
+            @click=${(e) => { this._removeItem(row.id); }}
             title="Delete item"
-          ></ha-icon-button>
+          >
+            <ha-icon icon="mdi:delete"></ha-icon>
+          </span>
         `,
       },
     };
@@ -106,10 +115,11 @@ export class ShoppingListOverlay extends LitElement {
   }
 
   async _removeItem(itemId: string) {
+    console.log('[ShoppingListOverlay] _removeItem called for', itemId);
     try {
       await this.listManager.removeItem(itemId, this.entityId);
-      this._showSuccess(translate("success.item_removed"));
-      fireEvent(this, "shopping-list-global-refresh");
+      await this._loadItems();
+      fireEvent(this, SHOPPING_LIST_REFRESH_EVENT);
     } catch (error) {
       this._showError(translate("errors.item_remove_failed"));
     }
@@ -129,7 +139,7 @@ export class ShoppingListOverlay extends LitElement {
       return html``;
     }
     const data = Array.isArray(this.items)
-      ? this.items.filter((item) => item && !item.completed)
+      ? this.items.filter((item) => item && item.status === ShoppingListStatus.NeedsAction)
       : [];
     return html`
       <ha-dialog .open=${this.open}>

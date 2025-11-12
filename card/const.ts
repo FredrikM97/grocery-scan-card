@@ -26,5 +26,6 @@ export const QUAGGA_READERS = [
 const TODO_DOMAIN = "todo";
 const TODO_ADD_ITEM = "add_item";
 const TODO_UPDATE_ITEM = "update_item";
+const TODO_REMOVE_ITEM = "remove_item";
 const TODO_CLEAR_COMPLETED = "clear_completed_items";
-export { TODO_DOMAIN, TODO_ADD_ITEM, TODO_UPDATE_ITEM, TODO_CLEAR_COMPLETED };
+export { TODO_DOMAIN, TODO_ADD_ITEM, TODO_UPDATE_ITEM, TODO_REMOVE_ITEM as TODO_DELETE_ITEM, TODO_CLEAR_COMPLETED };

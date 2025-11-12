@@ -3,12 +3,14 @@ import { property, state } from "lit/decorators.js";
 import { SHOPPING_LIST_REFRESH_EVENT } from "../const";
 import { translate } from "../translations/translations.js";
 import { ShoppingListService } from "../services/item-service.js";
+import { fireEvent } from "../common.js";
 
 /**
  * <quick-chips-renderer>
  * Encapsulates the quick add chips for barcode-card
  */
 export class QuickChipsPanel extends LitElement {
+  private _windowRefreshListener: EventListener;
   @property({ type: Array }) chips: string[] = [];
   @state() private _items: Array<{ name: string; total?: number }> = [];
   @property({ type: Boolean }) disabled = false;
@@ -35,11 +37,16 @@ export class QuickChipsPanel extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.addEventListener(SHOPPING_LIST_REFRESH_EVENT, () =>
-      this._refreshChips(),
-    );
-    this._refreshChips();
+    this._windowRefreshListener = () => this._refreshChips();
+    window.addEventListener(SHOPPING_LIST_REFRESH_EVENT, this._windowRefreshListener);
+    setTimeout(() => this._refreshChips(), 0);
+}
+
+  disconnectedCallback() {
+  window.removeEventListener(SHOPPING_LIST_REFRESH_EVENT, this._windowRefreshListener);
+  super.disconnectedCallback();
   }
+
 
   async _refreshChips() {
     if (
@@ -48,23 +55,13 @@ export class QuickChipsPanel extends LitElement {
       typeof this.todoListService.getItems === "function"
     ) {
       this._items = await this.todoListService.getItems(this.entityId);
-      console.log("[QuickChipsPanel] Refreshed chips", {
-        items: this._items,
-      });
       this.requestUpdate();
     }
   }
   private async _handleChipClick(e: Event) {
     const target = e.currentTarget as HTMLElement;
     const productName = target.getAttribute("data-product") || target.textContent || "";
-    console.log("[QuickChipsPanel] Quick add chip clicked", {
-      productName,
-      entityId: this.entityId,
-      todoListService: this.todoListService,
-      chips: this.chips,
-      items: this._items,
-      disabled: this.disabled,
-    });
+
     if (this.todoListService && this.entityId && productName) {
       try {
         const result = await this.todoListService.addItem(productName, this.entityId);
@@ -73,12 +70,7 @@ export class QuickChipsPanel extends LitElement {
         if (shoppingListEl && typeof (shoppingListEl as any).refresh === "function") {
           (shoppingListEl as any).refresh();
         }
-        this.dispatchEvent(
-          new CustomEvent(SHOPPING_LIST_REFRESH_EVENT, {
-            bubbles: true,
-            composed: true,
-          }),
-        );
+        fireEvent(this, SHOPPING_LIST_REFRESH_EVENT, { item: result });
       } catch (error) {
         console.error("[QuickChipsPanel] Exception when handling quick add", {
           error,
@@ -111,18 +103,20 @@ export class QuickChipsPanel extends LitElement {
           <h3>${translate("quick_add.title") ?? "Quick Add"}</h3>
         </div>
         <div class="chips-container">
-          ${sortedChips.map(
-            (item) => html`
-              <ha-button
-                class="quick-chip"
-                data-product="${item}"
-                @click="${(e: Event) => this._handleChipClick(e)}"
-                ?disabled="${this.disabled}"
-              >
-                ${item}
-              </ha-button>
-            `,
-          )}
+          ${sortedChips.length === 0
+            ? html`<span style="color: var(--secondary-text-color, #888); font-size: 0.95em;">${translate("quick_add.empty") ?? "No quick add suggestions yet. Add items manually to build your quick add list!"}</span>`
+            : sortedChips.map(
+                (item) => html`
+                  <ha-button
+                    class="quick-chip"
+                    data-product="${item}"
+                    @click="${(e: Event) => this._handleChipClick(e)}"
+                    ?disabled="${this.disabled}"
+                  >
+                    ${item}
+                  </ha-button>
+                `,
+              )}
         </div>
       </div>
     `;

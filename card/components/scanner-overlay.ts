@@ -4,7 +4,6 @@ import { property, state } from "lit/decorators.js";
 import { fireEvent } from "../common";
 import { ProductLookup } from "../services/product-service";
 import { SUPPORTED_BARCODE_FORMATS } from "../const";
-import type { ShoppingListItem } from "../types";
 
 // Add type definition if not available in DOM lib
 declare global {
@@ -25,6 +24,12 @@ declare global {
 }
 
 export class BarcodeScannerDialog extends LitElement {
+  @state() open = false;
+  @state() scanState = { barcode: "", format: "" };
+  @state() editState = { name: "", brand: "", barcode: "" };
+  @state() apiProduct = null;
+  private stream: MediaStream | null = null;
+  private detector: BarcodeDetector | null = null;
   
   @property({ type: Object }) serviceState = {
     hass: null,
@@ -33,26 +38,41 @@ export class BarcodeScannerDialog extends LitElement {
     productLookup: null,
   };
 
-  @state() open = false;
-  @state() scanState = { barcode: "", format: "" };
-  @state() editState = { name: "", brand: "", barcode: "" };
-  @state() apiProduct = null;
-  private stream: MediaStream | null = null;
-  private detector: BarcodeDetector | null = null;
-
-
   static styles = css`
-    ha-dialog {
+    ha-dialog, dialog {
       --dialog-max-width: 480px;
+      background: var(--ha-card-background, var(--card-background-color, #fff));
+      color: var(--ha-card-text-color, var(--primary-text-color, #333));
+      border-radius: var(--ha-card-border-radius, 12px);
+      box-shadow: var(--ha-card-box-shadow, 0 2px 8px rgba(0, 0, 0, 0.1));
+      font-family: var(--ha-font-family, var(--paper-font-body1_-_font-family, system-ui));
     }
     video {
       width: 100%;
-      border-radius: 8px;
+      border-radius: var(--ha-card-border-radius, 8px);
+      background: var(--ha-card-background, var(--card-background-color, #fff));
+      box-shadow: var(--ha-card-box-shadow, 0 2px 8px rgba(0, 0, 0, 0.08));
     }
     p {
       font-size: 1.1em;
       text-align: center;
       margin-top: 8px;
+      color: var(--ha-card-text-color, var(--primary-text-color, #333));
+    }
+    input {
+      font-size: 1em;
+      padding: 8px;
+      border-radius: var(--ha-action-border-radius, 6px);
+      border: 1px solid var(--ha-primary-color, #2196f3);
+      background: var(--ha-card-background, var(--card-background-color, #fff));
+      color: var(--ha-card-text-color, var(--primary-text-color, #333));
+    }
+    .button-row {
+      display: flex;
+      flex-direction: row;
+      gap: 12px;
+      margin-top: 16px;
+      justify-content: center;
     }
   `;
 
@@ -89,6 +109,10 @@ export class BarcodeScannerDialog extends LitElement {
 
   public async openDialog() {
     console.log("[ScannerOverlay] openDialog called");
+    // Reset state to clear previous scan
+    this.scanState = { barcode: "", format: "" };
+    this.editState = { name: "", brand: "", barcode: "" };
+    this.apiProduct = null;
     this.open = true;
     if (this.open) await this.startScanner();
     this.requestUpdate();
@@ -218,16 +242,23 @@ export class BarcodeScannerDialog extends LitElement {
                     style="width:90%;margin-bottom:8px;"
                   />
                 </label>
-                <br />
-                <ha-button type="button" @click=${() => this._addToList()}>
-                  Add to List
-                </ha-button>
+                <div class="button-row">
+                  <ha-button type="button" @click=${() => this._addToList()}>
+                    Add to List
+                  </ha-button>
+                  <ha-button type="button" @click=${() => (this.closeDialog())}>
+                    Close
+                  </ha-button>
+                </div>
               </div>
             `
-          : ""}
-        <ha-button type="button" @click=${() => (this.closeDialog())}>
-          Close
-        </ha-button>
+          : html`
+              <div class="button-row">
+                <ha-button type="button" @click=${() => (this.closeDialog())}>
+                  Close
+                </ha-button>
+              </div>
+            `}
       </dialog>
     `;
   }
