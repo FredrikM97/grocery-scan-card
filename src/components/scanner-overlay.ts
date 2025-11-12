@@ -151,9 +151,9 @@ export class BarcodeScannerDialog extends LitElement {
   }
 
   public closeDialog() {
-  this.stopScanner();
-  this.open = false;
-  this.banner = null;
+    this.stopScanner();
+    this.open = false;
+    this.banner = null;
   }
 
   async startScanner() {
@@ -196,9 +196,12 @@ export class BarcodeScannerDialog extends LitElement {
     try {
       await this.video.play();
     } catch (err: any) {
-      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+      if (
+        err.name === "NotAllowedError" ||
+        err.name === "PermissionDeniedError"
+      ) {
         this.banner = BannerMessage.error(
-          "Camera permission denied. Please allow camera access in your browser or app settings."
+          "Camera permission denied. Please allow camera access in your browser or app settings.",
         );
         return;
       }
