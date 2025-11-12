@@ -4,6 +4,7 @@ import { SHOPPING_LIST_REFRESH_EVENT } from "../const";
 import { translate } from "../translations/translations.js";
 import { ShoppingListService } from "../services/item-service.js";
 import { fireEvent } from "../common.js";
+import type { ShoppingListItem } from "../types";
 
 /**
  * <add-item-panel>
@@ -125,11 +126,14 @@ export class InputPanel extends LitElement {
       return;
     }
     try {
-      const description = `count:${this.inputCount}`;
+      const item: Partial<ShoppingListItem> = {
+        name: this.inputValue,
+        count: this.inputCount,
+      };
       const result = await this.todoListService.addItem(
         this.inputValue,
         this.entityId,
-        description,
+        item,
       );
       if (result) {
         fireEvent(this, SHOPPING_LIST_REFRESH_EVENT, { item: result });

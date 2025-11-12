@@ -1,8 +1,13 @@
 /**
  * ShoppingListService - Unified Home Assistant shopping/todo list service
  */
-import { ShoppingListItem } from "../types";
+import { TODO_ADD_ITEM, TODO_CLEAR_COMPLETED, TODO_DOMAIN, TODO_UPDATE_ITEM, TODO_CALL_SERVICE, TODO_GET_ITEMS } from "../const";
+import { ShoppingListItem, ShoppingListStatus } from "../types";
+
+
 export class ShoppingListService {
+  // Only one hass property should exist, remove duplicate
+
   private hass: Record<string, unknown>;
 
   constructor(hass: Record<string, unknown>) {
@@ -12,106 +17,113 @@ export class ShoppingListService {
   async addItem(
     name: string,
     entityId: string,
-    description: string | { barcode?: string; count?: number } = "",
+    itemData: Partial<ShoppingListItem> = {},
   ): Promise<boolean> {
-    let opts: { barcode?: string; count?: number } = {};
-    if (typeof description === "object" && description !== null) {
-      opts = description;
-    }
-    const barcode: string = opts.barcode || "";
-    const count: number = typeof opts.count === "number" ? opts.count : 1;
-    console.log("[ShoppingListService] addItem called", {
-      name,
-      entityId,
-      description,
-      opts,
-      barcode,
-      count,
-      hass: this.hass,
-    });
-    try {
-      const availableServices = (this.hass as any).services || {};
-      if (!availableServices["todo"] || !availableServices["todo"]["add_item"]) {
-        console.warn(`[ShoppingListService] addItem failed: 'todo.add_item' service not available`, {
-          services: availableServices,
-        });
-        return false;
-      }
-      const items: ShoppingListItem[] = await this.getItems(entityId);
-      const normalizedName: string = name.trim().toLowerCase();
-      const existing: ShoppingListItem | undefined = items.find(
-        (item: ShoppingListItem) => {
-          const itemName: string = (item.name || "").trim().toLowerCase();
-          return itemName === normalizedName && !item.completed;
-        },
-      );
-      let newCount: number = count;
-      let newTotal: number = count;
-      if (existing) {
-        newCount = (existing.count ?? 0) + count;
-        newTotal = (existing.total ?? 0) + count;
-        const newDesc: string = `barcode:${barcode};count:${newCount};total:${newTotal}`;
-        const itemId: string = existing.id;
-        console.log("[ShoppingListService] Updating existing item", { itemId, newDesc });
-        await (this.hass as any).callService("todo", "update_item", {
-          entity_id: entityId,
-          item: itemId,
-          description: newDesc,
-        });
-        return true;
-      } else {
-        const newDesc: string = `barcode:${barcode};count:${count};total:${count}`;
-        console.log("[ShoppingListService] Adding new item", { name, entityId, newDesc });
-        await (this.hass as any).callService("todo", "add_item", {
-          entity_id: entityId,
-          item: name,
-          description: newDesc,
-        });
-        return true;
-      }
-    } catch (error) {
-      console.error("[ShoppingListService] addItem exception", { error, name, entityId, description });
+    // Check service availability directly
+    if (!((this.hass as any).services?.[TODO_DOMAIN]?.[TODO_ADD_ITEM])) {
+      console.warn(`[ShoppingListService] addItem failed: '${TODO_DOMAIN}.${TODO_ADD_ITEM}' service not available`, {
+        services: (this.hass as any).services,
+      });
       return false;
     }
+
+    // Find existing item by normalized name and barcode
+    const items = await this.getItems(entityId);
+    const existing = items.find(item =>
+      this.normalizeString(item.name) === this.normalizeString(name) &&
+      (item.barcode ?? "") === (itemData.barcode ?? "")
+    );
+
+    if (existing) {
+      const updatedItem = this.getUpdatedItem(existing, itemData);
+      const newDesc = this.itemToDescription(updatedItem);
+      await (this.hass as any).callService(TODO_DOMAIN, TODO_UPDATE_ITEM, {
+        entity_id: entityId,
+        item: existing.id,
+        description: newDesc,
+        status: updatedItem.status,
+      });
+      return true;
+    }
+
+    // No existing item: create new
+    return await this.createNewItem({
+      id: "", // will be set by backend
+      name,
+      status: ShoppingListStatus.NeedsAction,
+      barcode: itemData.barcode ?? "",
+      brand: itemData.brand,
+      count: itemData.count ?? 1,
+      total: itemData.count ?? 1,
+    }, entityId);
+  }
+
+  // Helper to process item update logic
+  private getUpdatedItem(existing: ShoppingListItem, itemData: Partial<ShoppingListItem>): ShoppingListItem {
+    const isCompleted = existing.status === ShoppingListStatus.Completed;
+    return {
+      ...existing,
+      count: isCompleted ? (itemData.count ?? 1) : (existing.count ?? 0) + (itemData.count ?? 1),
+      total: (existing.total ?? 0) + (itemData.count ?? 1),
+      status: isCompleted ? ShoppingListStatus.NeedsAction : existing.status,
+    };
+  }
+
+  // Helper to create and add a new item
+  private async createNewItem(
+    item: ShoppingListItem,
+    entityId: string
+  ): Promise<boolean> {
+    const newDesc = this.itemToDescription(item);
+    await (this.hass as any).callService(TODO_DOMAIN, TODO_ADD_ITEM, {
+      entity_id: entityId,
+      item: item.name,
+      description: newDesc,
+    });
+    return true;
+  }
+
+  // Consistent normalization helper
+  private normalizeString(str?: string): string {
+    return (str ?? "").trim().toLowerCase();
+  }
+
+  private rawToShoppingListItem(item: any): ShoppingListItem {
+    const desc = item.description || "";
+    const barcodeMatch = desc.match(/barcode:([^;]*)/);
+    const brandMatch = desc.match(/brand:([^;]*)/);
+    const countMatch = desc.match(/count:(\d+)/);
+    const totalMatch = desc.match(/total:(\d+)/);
+    return {
+      id: item.uid || item.id || item.name || "",
+      name: item.summary || item.name || "",
+      status: item.status,
+      barcode: barcodeMatch ? barcodeMatch[1] : undefined,
+      brand: brandMatch ? brandMatch[1] : undefined,
+      count: countMatch ? parseInt(countMatch[1], 10) : 0,
+      total: totalMatch ? parseInt(totalMatch[1], 10) : 0,
+    };
   }
 
   async getItems(entityId: string): Promise<ShoppingListItem[]> {
     try {
       const wsResult = await (this.hass as any).callWS({
-        type: "call_service",
-        domain: "todo",
-        service: "get_items",
+        type: TODO_CALL_SERVICE,
+        domain: TODO_DOMAIN,
+        service: TODO_GET_ITEMS,
         service_data: { entity_id: entityId },
         return_response: true,
       });
       const rawItems = wsResult?.response?.[entityId]?.items || [];
-      const items: ShoppingListItem[] = (rawItems || []).map(
-        (item: {
-          uid?: string;
-          id?: string;
-          name?: string;
-          summary?: string;
-          status?: string;
-          description?: string;
-        }) => {
-          const desc = item.description || "";
-          const barcodeMatch = desc.match(/barcode:([^;]*)/);
-          const countMatch = desc.match(/count:(\d+)/);
-          const totalMatch = desc.match(/total:(\d+)/);
-          return {
-            id: item.uid || item.id || item.name || "",
-            name: item.summary || item.name || "",
-            completed: item.status === "completed",
-            barcode: barcodeMatch ? barcodeMatch[1] : undefined,
-            count: countMatch ? parseInt(countMatch[1], 10) : 0,
-            total: totalMatch ? parseInt(totalMatch[1], 10) : 0,
-          };
-        },
-      );
-      return items;
+      return (rawItems || []).map(this.rawToShoppingListItem);
     } catch (error) {
       return [];
     }
+  }
+
+  // Convert ShoppingListItem to description string
+  private itemToDescription(item: ShoppingListItem): string {
+    return `barcode:${item.barcode ?? ""};brand:${item.brand ?? ""};count:${item.count ?? 0};total:${item.total ?? 0}`;
   }
 
   async toggleComplete(itemId: string, entityId: string): Promise<boolean> {
@@ -119,11 +131,16 @@ export class ShoppingListService {
       const items: ShoppingListItem[] = await this.getItems(entityId);
       const item = items.find((i) => i.id === itemId);
       if (!item) throw new Error("Item not found");
-      const newDesc = `barcode:${item.barcode ?? ""};count:0;total:${item.total ?? 0}`;
-      await (this.hass as any).callService("todo", "update_item", {
+      const completedItem: ShoppingListItem = {
+        ...item,
+        count: 0,
+        status: ShoppingListStatus.Completed,
+      };
+      const newDesc = this.itemToDescription(completedItem);
+      await (this.hass as any).callService(TODO_DOMAIN, TODO_UPDATE_ITEM, {
         entity_id: entityId,
         item: itemId,
-        status: "completed",
+        status: completedItem.status,
         description: newDesc,
       });
       return true;
@@ -135,23 +152,27 @@ export class ShoppingListService {
   async clearCompleted(entityId: string): Promise<boolean> {
     try {
       const items: ShoppingListItem[] = await this.getItems(entityId);
-      const completedItems = items.filter((i) => i.completed);
-      for (const item of completedItems) {
-        const newDesc = `barcode:${item.barcode ?? ""};count:0;total:${item.total ?? 0}`;
-        await (this.hass as any).callService("todo", "update_item", {
+      await Promise.all(items.filter(i => i.status === ShoppingListStatus.Completed).map(async item => {
+        const clearedItem: ShoppingListItem = {
+          ...item,
+          count: 0,
+          status: ShoppingListStatus.NeedsAction,
+        };
+        const newDesc = this.itemToDescription(clearedItem);
+        await (this.hass as any).callService(TODO_DOMAIN, TODO_UPDATE_ITEM, {
           entity_id: entityId,
           item: item.id,
-          status: "completed",
           description: newDesc,
+          status: clearedItem.status,
         });
-      }
+      }));
       // Optionally call clear_completed_items if needed
       const availableServices = (this.hass as any).services || {};
       if (
-        availableServices["todo"] &&
-        availableServices["todo"]["clear_completed_items"]
+        availableServices[TODO_DOMAIN] &&
+        availableServices[TODO_DOMAIN][TODO_CLEAR_COMPLETED]
       ) {
-        await (this.hass as any).callService("todo", "clear_completed_items", {
+        await (this.hass as any).callService(TODO_DOMAIN, TODO_CLEAR_COMPLETED, {
           entity_id: entityId,
         });
       }
@@ -159,16 +180,5 @@ export class ShoppingListService {
     } catch (error) {
       return false;
     }
-  }
-
-  formatProductDescription(
-    product: { brand?: string; barcode?: string; source?: string } | null,
-  ): string {
-    if (!product) return "";
-    const parts = [];
-    if (product.brand) parts.push(`Brand: ${product.brand}`);
-    if (product.barcode) parts.push(`Barcode: ${product.barcode}`);
-    if (product.source) parts.push(`Source: ${product.source}`);
-    return parts.join(" | ");
   }
 }

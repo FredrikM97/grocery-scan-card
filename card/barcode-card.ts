@@ -113,13 +113,17 @@ export class BarcodeCard extends LitElement {
   }
 
   render() {
+    const serviceState = {
+      hass: this._hass,
+      todoListService: this.todoListService,
+      entityId: this.config?.entity ?? "",
+      productLookup: this.productLookup,
+    };
     return html`
       <div class="card-container">
         <!-- Scanner Overlay -->
         <sl-scanner-overlay
-          .todoListService="${this.todoListService}"
-          .entityId="${this.config?.entity}"
-          .productLookup="${this.productLookup}"
+          .serviceState="${serviceState}"
         ></sl-scanner-overlay>
         <!-- Actions Section -->
 

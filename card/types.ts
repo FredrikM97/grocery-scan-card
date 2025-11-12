@@ -24,11 +24,16 @@ export interface Product {
   source?: string;
 }
 
+export enum ShoppingListStatus {
+  NeedsAction = 'needs_action',
+  Completed = 'completed',
+}
 export interface ShoppingListItem {
   id: string;
   name: string;
-  completed: boolean;
+  status: ShoppingListStatus;
   barcode?: string;
+  brand?: string;
   count?: number;
   total?: number;
 }

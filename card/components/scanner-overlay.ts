@@ -1,9 +1,10 @@
-
 import { loadHaComponents } from "@kipk/load-ha-components";
 import { LitElement, html, css } from "lit";
 import { property, state } from "lit/decorators.js";
 import { fireEvent } from "../common";
 import { ProductLookup } from "../services/product-service";
+import { SUPPORTED_BARCODE_FORMATS } from "../const";
+import type { ShoppingListItem } from "../types";
 
 // Add type definition if not available in DOM lib
 declare global {
@@ -24,6 +25,22 @@ declare global {
 }
 
 export class BarcodeScannerDialog extends LitElement {
+  
+  @property({ type: Object }) serviceState = {
+    hass: null,
+    todoListService: null,
+    entityId: "",
+    productLookup: null,
+  };
+
+  @state() open = false;
+  @state() scanState = { barcode: "", format: "" };
+  @state() editState = { name: "", brand: "", barcode: "" };
+  @state() apiProduct = null;
+  private stream: MediaStream | null = null;
+  private detector: BarcodeDetector | null = null;
+
+
   static styles = css`
     ha-dialog {
       --dialog-max-width: 480px;
@@ -39,26 +56,31 @@ export class BarcodeScannerDialog extends LitElement {
     }
   `;
 
-  @property({ type: Object }) hass?: any;
-  @property({ type: Object }) barcode?: any;
-  @property({ type: Object }) format?: any;
-  @property({ type: Object }) todoListService: any = null;
-  @property({ type: String }) entityId: string = "";
-  @property({ type: Object }) productLookup: ProductLookup = null;
-
   constructor() {
     super();
-    if (!this.productLookup) {
-      this.productLookup = new ProductLookup();
-    }
   }
   
-  @state() open = false;
-  private stream: MediaStream | null = null;
-  private detector: BarcodeDetector | null = null;
+  createEditProduct(product, barcode) {
+    return {
+      name: product && product.name ? product.name : "",
+      brand: product && product.brand ? product.brand : "",
+      barcode: product && product.barcode ? product.barcode : barcode,
+    };
+  }
 
-  
   async updated(changed: Map<string, unknown>) {
+    if (changed.has("serviceState")) {
+      // Defensive: ensure required fields are present
+      if (!this.serviceState.todoListService) {
+        console.error('[ScannerOverlay] todoListService is null, cannot add item');
+      }
+      if (!this.serviceState.entityId) {
+        console.error('[ScannerOverlay] entityId is null, cannot add item');
+      }
+      if (!this.serviceState.productLookup) {
+        this.serviceState.productLookup = new ProductLookup();
+      }
+    }
     if (changed.has("open")) {
       if (this.open) await this.startScanner();
       else this.stopScanner();
@@ -99,70 +121,61 @@ export class BarcodeScannerDialog extends LitElement {
     console.log("[ScannerOverlay] Video stream started");
 
     this.detector = new BarcodeDetector({
-      formats: ["qr_code", "code_128", "ean_13", "code_39", "upc_a"],
+      formats: SUPPORTED_BARCODE_FORMATS,
     });
+
+    const handleBarcode = async (barcode: string, format: string) => {
+      this.scanState = { barcode, format };
+      console.log(`[ScannerOverlay] Detected barcode: ${barcode} (format: ${format})`);
+      console.log(`[ScannerOverlay] Starting product lookup for barcode: ${barcode}`);
+      try {
+        await this.serviceState.productLookup.lookupBarcode(
+          barcode,
+          (product: any) => {
+            this.apiProduct = product;
+            this.editState = this.createEditProduct(product, barcode);
+            this.requestUpdate();
+          },
+          (barcode: string) => {
+            this.apiProduct = null;
+            this.editState = this.createEditProduct(null, barcode);
+            this.requestUpdate();
+          }
+        );
+      } catch (err) {
+        console.error("Product lookup failed", err);
+      }
+      this.stopScanner();
+    };
 
     const detectLoop = async () => {
       if (!this.open || !this.detector) return;
       try {
         const barcodes = await this.detector.detect(video);
-        if (barcodes.length > 0) {
-          const { rawValue, format } = barcodes[0];
-          if (rawValue !== this.barcode) {
-            this.barcode = rawValue;
-            this.format = format;
-            console.log(`[ScannerOverlay] Detected barcode: ${rawValue} (format: ${format})`);
-            // Lookup product and add to todo list
-            
-              console.log(`[ScannerOverlay] Starting product lookup for barcode: ${rawValue}`);
-              await this.productLookup.lookupBarcode(
-                rawValue,
-                async (product: any) => {
-                  console.log(`[ScannerOverlay] Product found:`, product);
-                  let nameToAdd = product.name || rawValue;
-                  if (product.brand) {
-                    nameToAdd += ` (${product.brand})`;
-                  }
-                  if (!this.todoListService) {
-                    console.error('[ScannerOverlay] todoListService is null, cannot add item');
-                    return;
-                  }
-                  if (!this.entityId) {
-                    console.error('[ScannerOverlay] entityId is null, cannot add item');
-                    return;
-                  }
-                  const description = `barcode:${product.barcode || rawValue}`;
-                  const result = await this.todoListService.addItem(nameToAdd, this.entityId, description);
-                  console.log(`[ScannerOverlay] Added to todo list:`, { name: nameToAdd, entityId: this.entityId, description, result });
-                },
-                async (barcode: string) => {
-                  console.log(`[ScannerOverlay] Product not found, adding barcode as name: ${barcode}`);
-                  if (!this.todoListService) {
-                    console.error('[ScannerOverlay] todoListService is null, cannot add item');
-                    return;
-                  }
-                  if (!this.entityId) {
-                    console.error('[ScannerOverlay] entityId is null, cannot add item');
-                    return;
-                  }
-                  const description = `barcode:${barcode}`;
-                  const result = await this.todoListService.addItem(barcode, this.entityId, description);
-                  console.log(`[ScannerOverlay] Added to todo list:`, { name: barcode, entityId: this.entityId, description, result });
-                }
-              );
-          
-            this.stopScanner();
-            this.closeDialog();
-            return;
-          }
+        if (barcodes.length === 0) {
+          requestAnimationFrame(detectLoop);
+          return;
         }
+        const { rawValue, format } = barcodes[0];
+        if (rawValue === this.scanState.barcode) {
+          requestAnimationFrame(detectLoop);
+          return;
+        }
+        await handleBarcode(rawValue, format);
+        // After handling, don't continue loop (dialog closes or scanner stops)
       } catch (err) {
-        console.error(err);
+        console.error("Barcode detection failed", err);
+        requestAnimationFrame(detectLoop);
       }
-      requestAnimationFrame(detectLoop);
     };
 
     detectLoop();
+  }
+
+  private async _addToList() {
+    const result = await this.serviceState.todoListService.addItem(this.editState.name, this.serviceState.entityId, this.editState);
+    console.log(`[ScannerOverlay] Added to todo list:`, { product: this.editState, entityId: this.serviceState.entityId, result });
+    this.closeDialog();
   }
 
   stopScanner() {
@@ -177,18 +190,48 @@ export class BarcodeScannerDialog extends LitElement {
     return html`
       <dialog ?open=${this.open} style="z-index:10000;">
         <h2>Scan a Barcode</h2>
-        <video id="video" autoplay></video>
+        <video id="video" autoplay ?hidden=${!!this.scanState.barcode}></video>
         <p>
-          ${this.barcode
-            ? `Detected: ${this.barcode} (${this.format})`
+          ${this.scanState.barcode
+            ? `Detected: ${this.scanState.barcode} (${this.scanState.format})`
             : "Point camera at barcode"}
         </p>
+        ${this.scanState.barcode
+          ? html`
+              <div style="margin-top:16px;">
+                <label>
+                  Name:<br />
+                  <input
+                    type="text"
+                    .value=${this.editState.name}
+                    @input=${(e: any) => { this.editState = { ...this.editState, name: e.target.value }; this.requestUpdate(); }}
+                    style="width:90%;margin-bottom:8px;"
+                  />
+                </label>
+                <br />
+                <label>
+                  Brand:<br />
+                  <input
+                    type="text"
+                    .value=${this.editState.brand}
+                    @input=${(e: any) => { this.editState = { ...this.editState, brand: e.target.value }; this.requestUpdate(); }}
+                    style="width:90%;margin-bottom:8px;"
+                  />
+                </label>
+                <br />
+                <ha-button type="button" @click=${() => this._addToList()}>
+                  Add to List
+                </ha-button>
+              </div>
+            `
+          : ""}
         <ha-button type="button" @click=${() => (this.closeDialog())}>
           Close
         </ha-button>
       </dialog>
     `;
   }
+  
 }
 
 customElements.define("sl-scanner-overlay", BarcodeScannerDialog);
