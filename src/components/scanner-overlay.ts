@@ -5,6 +5,8 @@ import "./message-banner";
 import { ProductLookup } from "../services/product-service";
 import { TodoService } from "../services/todo-service";
 import { SUPPORTED_BARCODE_FORMATS } from "../const";
+import { BrowserMultiFormatReader } from "@zxing/browser";
+import NotFoundException from "@zxing/library/esm/core/NotFoundException";
 import "./dialog-overlay";
 
 // Add type definition if not available in DOM lib
@@ -30,6 +32,7 @@ declare global {
 export class BarcodeScannerDialog extends LitElement {
   private video: HTMLVideoElement | null = null;
   private detector: BarcodeDetector | null = null;
+  private zxingReader: BrowserMultiFormatReader | null = null;
   @state() open = false;
   @state() scanState = { barcode: "", format: "" };
   @state() editState = { name: "", brand: "", barcode: "" };
@@ -157,12 +160,6 @@ export class BarcodeScannerDialog extends LitElement {
   }
 
   async startScanner() {
-    if (!("BarcodeDetector" in window)) {
-      this.banner = BannerMessage.error(
-        "BarcodeDetector not supported in this browser",
-      );
-      return;
-    }
     // Clear error if camera is available
     if (this.banner) {
       this.banner = null;
@@ -212,17 +209,30 @@ export class BarcodeScannerDialog extends LitElement {
         return;
       }
     }
-    try {
-      this.detector = new BarcodeDetector({
-        formats: SUPPORTED_BARCODE_FORMATS,
-      });
-    } catch (err) {
-      this.banner = BannerMessage.error(
-        "BarcodeDetector init failed: " + (err?.message || err),
-      );
-      return;
+    if ("BarcodeDetector" in window) {
+      try {
+        this.detector = new BarcodeDetector({
+          formats: SUPPORTED_BARCODE_FORMATS,
+        });
+      } catch (err) {
+        this.banner = BannerMessage.error(
+          "BarcodeDetector init failed: " + (err?.message || err),
+        );
+        return;
+      }
+      this.detectLoop();
+    } else {
+      // Fallback to @zxing/browser
+      try {
+        this.zxingReader = new BrowserMultiFormatReader();
+      } catch (err) {
+        this.banner = BannerMessage.error(
+          "Barcode scanning not supported: " + (err?.message || err),
+        );
+        return;
+      }
+      this.detectLoopZXing();
     }
-    this.detectLoop();
   }
 
   private async handleBarcode(barcode: string, format: string) {
@@ -282,29 +292,57 @@ export class BarcodeScannerDialog extends LitElement {
   }
 
   private detectLoop = async () => {
-    if (!this.open || !this.detector) return;
-    try {
-      if (this.video.readyState < 2 || !this.video.srcObject) {
+    if (!this.open) return;
+    if (this.detector) {
+      try {
+        if (this.video.readyState < 2 || !this.video.srcObject) {
+          requestAnimationFrame(this.detectLoop);
+          return;
+        }
+        const barcodes = await this.detector.detect(this.video);
+        if (!barcodes.length) {
+          requestAnimationFrame(this.detectLoop);
+          return;
+        }
+        const { rawValue, format } = barcodes[0];
+        if (rawValue === this.scanState.barcode) {
+          requestAnimationFrame(this.detectLoop);
+          return;
+        }
+        await this.handleBarcode(rawValue, format);
+      } catch (err) {
+        this.banner = BannerMessage.error(
+          "Barcode detection failed: " + (err?.message || err),
+        );
         requestAnimationFrame(this.detectLoop);
-        return;
       }
-      const barcodes = await this.detector.detect(this.video);
-      if (!barcodes.length) {
-        requestAnimationFrame(this.detectLoop);
-        return;
-      }
-      const { rawValue, format } = barcodes[0];
-      if (rawValue === this.scanState.barcode) {
-        requestAnimationFrame(this.detectLoop);
-        return;
-      }
+    }
+  };
 
-      await this.handleBarcode(rawValue, format);
-    } catch (err) {
-      this.banner = BannerMessage.error(
-        "Barcode detection failed: " + (err?.message || err),
-      );
-      requestAnimationFrame(this.detectLoop);
+  private detectLoopZXing = async () => {
+    if (!this.open || !this.zxingReader || !this.video) return;
+    try {
+      const result = await this.zxingReader.decodeOnceFromVideoElement(this.video);
+      if (result && result.getText()) {
+        await this.handleBarcode(result.getText(), result.getBarcodeFormat());
+        return;
+      }
+    } catch (err: any) {
+      if (err instanceof NotFoundException) {
+        // No barcode found, keep scanning
+        if (this.open) {
+          setTimeout(this.detectLoopZXing, 200);
+        }
+        return;
+      } else {
+        this.banner = BannerMessage.error(
+          "Barcode detection failed: " + (err?.message || err),
+        );
+        return;
+      }
+    }
+    if (this.open) {
+      setTimeout(this.detectLoopZXing, 200);
     }
   };
 
@@ -337,6 +375,10 @@ export class BarcodeScannerDialog extends LitElement {
       const stream = this.video.srcObject as MediaStream;
       stream.getTracks().forEach((track) => track.stop());
       this.video.srcObject = null;
+    }
+    if (this.zxingReader) {
+      // No reset() method; just dereference for GC
+      this.zxingReader = null;
     }
   }
 
