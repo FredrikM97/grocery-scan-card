@@ -38,6 +38,8 @@ export class BarcodeScannerDialog extends LitElement {
   @state() editState = { name: "", brand: "", barcode: "" };
   @state() apiProduct = null;
   @state() banner: BannerMessage | null = null;
+  @state() availableCameras: MediaDeviceInfo[] = [];
+  @state() selectedCameraId: string | null = null;
 
   @property({ type: Object }) serviceState: {
     hass: any;
@@ -84,6 +86,17 @@ export class BarcodeScannerDialog extends LitElement {
       margin-top: 16px;
       justify-content: center;
     }
+    .camera-select {
+      margin-right: 8px;
+      min-width: 120px;
+      max-width: 180px;
+      font-size: 0.95em;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--ha-primary-color, #2196f3);
+      background: var(--ha-card-background, var(--card-background-color, #222));
+      color: var(--ha-card-text-color, var(--primary-text-color, #fff));
+    }
     .scanner-inputs {
       display: flex;
       flex-direction: column;
@@ -122,6 +135,27 @@ export class BarcodeScannerDialog extends LitElement {
 
   constructor() {
     super();
+    this._onBarcodeScanned = this._onBarcodeScanned.bind(this);
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("barcode-scanned", this._onBarcodeScanned);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("barcode-scanned", this._onBarcodeScanned);
+    super.disconnectedCallback();
+  }
+
+  private async _onBarcodeScanned(ev: Event) {
+    const detail = (ev as CustomEvent).detail;
+    if (detail && detail.result) {
+      // Home Assistant app returns just the barcode string, no format
+      await this.handleBarcode(detail.result, "native");
+    } else {
+      this.banner = BannerMessage.error("No barcode found by app scanner.");
+    }
   }
 
   createEditProduct(product, barcode) {
@@ -139,9 +173,35 @@ export class BarcodeScannerDialog extends LitElement {
       }
     }
     if (changed.has("open")) {
-      if (this.open) await this.startScanner();
-      else await this.stopScanner();
+      if (this.open) {
+        await this.getListOfCameras();
+        await this.startScanner();
+      } else {
+        await this.stopScanner();
+      }
     }
+  }
+
+  async getListOfCameras() {
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.enumerateDevices !== "function") {
+      this.availableCameras = [];
+      return;
+    }
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      this.availableCameras = devices.filter((device) => device.kind === "videoinput");
+      if (!this.selectedCameraId && this.availableCameras.length > 0) {
+        this.selectedCameraId = this.availableCameras[0].deviceId;
+      }
+    } catch (e) {
+      this.availableCameras = [];
+    }
+  }
+
+  private pickCameraDevice(deviceId: string) {
+    this.selectedCameraId = deviceId;
+    this.stopScanner();
+    this.startScanner();
   }
 
   public async openDialog() {
@@ -170,9 +230,20 @@ export class BarcodeScannerDialog extends LitElement {
       this.banner = BannerMessage.error("Video element not found");
       return;
     }
+    // Robust check for camera API support
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+      this.banner = BannerMessage.error(
+        "Camera access is not supported in this environment. Please use a browser that supports camera access."
+      );
+      return;
+    }
+    let videoConstraints: any = { facingMode: "environment" };
+    if (this.selectedCameraId) {
+      videoConstraints = { deviceId: { exact: this.selectedCameraId } };
+    }
     try {
       this.video.srcObject = await navigator.mediaDevices.getUserMedia({
-        video: true,
+        video: videoConstraints,
         audio: false,
       });
     } catch (err: any) {
@@ -392,13 +463,30 @@ export class BarcodeScannerDialog extends LitElement {
       <div class="video-container">
         <video id="video" muted autoplay></video>
       </div>
-      <span slot="footer">
+      <div class="button-row">
+        <select
+          class="camera-select"
+          @change=${(e: Event) => this.pickCameraDevice((e.target as HTMLSelectElement).value)}
+        >
+          ${this.availableCameras.length === 0
+            ? html`<option disabled selected>No cameras found</option>`
+            : this.availableCameras.map(
+                (camera) => html`<option
+                  value=${camera.deviceId}
+                  ?selected=${this.selectedCameraId === camera.deviceId}
+                >
+                  ${camera.label || `Camera ${camera.deviceId}`}
+                </option>`
+              )}
+        </select>
         <ha-button type="button" @click=${() => this.closeDialog()}>
           Close
         </ha-button>
-      </span>
+      </div>
     `;
   }
+
+
 
   private renderBarcodeInfoView() {
     return html`
